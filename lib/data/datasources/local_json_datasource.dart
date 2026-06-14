@@ -5,11 +5,12 @@ import 'package:latlong2/latlong.dart';
 import '../models/user_model.dart';
 import '../models/incident_model.dart';
 import '../models/company_model.dart';
+import '../models/store_product_model.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/entities/incident.dart';
 
 class LocalJsonDatasource {
-  final String fileName = 'vigilo_data_v3.json';
+  final String fileName = 'vigilo_data_v5.json';
 
   Future<File> get _localFile async {
     final directory = await getApplicationDocumentsDirectory();
@@ -23,7 +24,12 @@ class LocalJsonDatasource {
         await _seedData();
       }
       final contents = await file.readAsString();
-      return json.decode(contents);
+      final data = json.decode(contents) as Map<String, dynamic>;
+      if (data['products'] == null) {
+        data['products'] = _defaultProducts().map((p) => p.toJson()).toList();
+        await file.writeAsString(json.encode(data));
+      }
+      return data;
     } catch (e) {
       await _seedData();
       final file = await _localFile;
@@ -35,13 +41,16 @@ class LocalJsonDatasource {
   Future<void> writeData(
     List<UserModel> users,
     List<IncidentModel> incidents,
-    List<CompanyModel> companies,
-  ) async {
+    List<CompanyModel> companies, {
+    List<StoreProductModel>? products,
+  }) async {
     final file = await _localFile;
     final data = {
       'users': users.map((u) => u.toJson()).toList(),
       'incidents': incidents.map((i) => i.toJson()).toList(),
       'companies': companies.map((c) => c.toJson()).toList(),
+      if (products != null)
+        'products': products.map((p) => p.toJson()).toList(),
     };
     await file.writeAsString(json.encode(data));
   }
@@ -214,7 +223,9 @@ class LocalJsonDatasource {
     ];
 
     // ===================== INCIDENTES SEMILLA =====================
+    final now = DateTime.now();
     final incidents = [
+      // --- INCIDENTES ACTIVOS ---
       IncidentModel(
         id: '1',
         title: 'Zona Peligrosa cerca del 2do Anillo',
@@ -222,33 +233,19 @@ class LocalJsonDatasource {
             'Se han reportado asaltos a peatones en horas de la noche.',
         location: const LatLng(-17.783327, -63.182141),
         type: IncidentType.insecurity,
-        reportedAt: DateTime.now().subtract(const Duration(hours: 3)),
+        reportedAt: now.subtract(const Duration(hours: 3)),
         reportedByUserId: 'u1',
         validatorsIds: ['u2'],
         status: IncidentStatus.active,
       ),
       IncidentModel(
-        id: '2',
-        title: 'Basura acumulada en Av. Cañoto',
-        description: 'Contenedor desbordado frente al mercado.',
-        location: const LatLng(-17.781000, -63.180000),
-        type: IncidentType.trash,
-        reportedAt: DateTime.now().subtract(const Duration(days: 2)),
-        reportedByUserId: 'u2',
-        validatorsIds: ['u1'],
-        status: IncidentStatus.resolved,
-        resolvedByUserId: 'u8',
-        resolvedByCompany: 'EcoLimpia Bolivia',
-        resolvedAt: DateTime.now().subtract(const Duration(days: 1)),
-        resolutionComment: 'Se realizó limpieza completa del área.',
-      ),
-      IncidentModel(
         id: '3',
         title: 'Maleza crecida en terreno baldío',
-        description: 'Hierba alta que cubre la vereda, dificulta el paso.',
+        description:
+            'Hierba alta que cubre la vereda, dificulta el paso de los transeúntes.',
         location: const LatLng(-17.785200, -63.178500),
         type: IncidentType.weeds,
-        reportedAt: DateTime.now().subtract(const Duration(hours: 12)),
+        reportedAt: now.subtract(const Duration(hours: 12)),
         reportedByUserId: 'u1',
         validatorsIds: [],
         status: IncidentStatus.active,
@@ -257,16 +254,193 @@ class LocalJsonDatasource {
         id: '4',
         title: 'Botellas plásticas disponibles',
         description:
-            'Aproximadamente 15 kg de PET limpios listos para recoger.',
+            'Aproximadamente 15 kg de botellas PET limpias listas para recoger.',
         location: const LatLng(-17.780500, -63.183200),
         type: IncidentType.recycling,
-        reportedAt: DateTime.now().subtract(const Duration(hours: 6)),
+        reportedAt: now.subtract(const Duration(hours: 6)),
         reportedByUserId: 'u2',
         validatorsIds: ['u1'],
         status: IncidentStatus.active,
       ),
+      IncidentModel(
+        id: '5',
+        title: 'Basura desbordada en contenedor',
+        description: 'Bolsas acumuladas fuera del depósito, atrae plagas.',
+        location: const LatLng(-17.784100, -63.185500),
+        type: IncidentType.trash,
+        reportedAt: now.subtract(const Duration(hours: 24)),
+        reportedByUserId: 'u2',
+        validatorsIds: [],
+        status: IncidentStatus.active,
+      ),
+
+      // --- INCIDENTES RESUELTOS (Para Estadísticas de Tiempo Promedio) ---
+      // 1. Inseguridad resuelta en 45 minutos (0.75 horas)
+      IncidentModel(
+        id: 'res_insecurity_1',
+        title: 'Presencia sospechosa en rotonda',
+        description:
+            'Dos sujetos merodeando negocios locales con actitud sospechosa.',
+        location: const LatLng(-17.782500, -63.181200),
+        type: IncidentType.insecurity,
+        reportedAt: now.subtract(const Duration(days: 3, hours: 2)),
+        reportedByUserId: 'u1',
+        validatorsIds: ['u2'],
+        status: IncidentStatus.resolved,
+        resolvedByUserId: 'u4',
+        resolvedByCompany: 'Seguridad Total SCZ',
+        resolvedAt: now.subtract(
+          const Duration(days: 3, hours: 1, minutes: 15),
+        ),
+        resolutionComment:
+            'Patrullaje preventivo despachado al lugar. Zona despejada y segura.',
+      ),
+      // 2. Basura resuelta en 30 horas (1.25 días)
+      IncidentModel(
+        id: '2',
+        title: 'Basura acumulada en Av. Cañoto',
+        description: 'Contenedor desbordado frente al mercado público.',
+        location: const LatLng(-17.781000, -63.180000),
+        type: IncidentType.trash,
+        reportedAt: now.subtract(const Duration(days: 5)),
+        reportedByUserId: 'u2',
+        validatorsIds: ['u1'],
+        status: IncidentStatus.resolved,
+        resolvedByUserId: 'u8',
+        resolvedByCompany: 'EcoLimpia Bolivia',
+        resolvedAt: now.subtract(const Duration(days: 3, hours: 18)),
+        resolutionComment:
+            'Se realizó limpieza completa del área y vaciado del contenedor.',
+      ),
+      // 3. Basura resuelta en 18 horas (0.75 días)
+      IncidentModel(
+        id: 'res_trash_2',
+        title: 'Microbasural en acera',
+        description: 'Restos de escombros y plásticos acumulados ilegalmente.',
+        location: const LatLng(-17.779500, -63.184000),
+        type: IncidentType.trash,
+        reportedAt: now.subtract(const Duration(days: 6)),
+        reportedByUserId: 'u1',
+        validatorsIds: [],
+        status: IncidentStatus.resolved,
+        resolvedByUserId: 'u9',
+        resolvedByCompany: 'EcoLimpia Bolivia',
+        resolvedAt: now.subtract(const Duration(days: 5, hours: 6)),
+        resolutionComment:
+            'Equipo especial de limpieza recogió los residuos con camión.',
+      ),
+      // 4. Maleza resuelta en 48 horas (2 días)
+      IncidentModel(
+        id: 'res_weeds_1',
+        title: 'Maleza obstruye paso peatonal',
+        description:
+            'Hierba silvestre ha crecido demasiado invadiendo la ciclovía.',
+        location: const LatLng(-17.786000, -63.181800),
+        type: IncidentType.weeds,
+        reportedAt: now.subtract(const Duration(days: 8)),
+        reportedByUserId: 'u2',
+        validatorsIds: ['u1'],
+        status: IncidentStatus.resolved,
+        resolvedByUserId: 'u8',
+        resolvedByCompany: 'EcoLimpia Bolivia',
+        resolvedAt: now.subtract(const Duration(days: 6)),
+        resolutionComment:
+            'Desmalezado completo realizado por la cuadrilla de limpieza.',
+      ),
+      // 5. Reciclaje recogido en 3 horas
+      IncidentModel(
+        id: 'res_recycling_1',
+        title: 'Cartón compactado listo',
+        description:
+            'Aproximadamente 40 kg de cartón seco atado para reciclaje.',
+        location: const LatLng(-17.782000, -63.184500),
+        type: IncidentType.recycling,
+        reportedAt: now.subtract(const Duration(days: 1, hours: 5)),
+        reportedByUserId: 'u1',
+        validatorsIds: [],
+        status: IncidentStatus.resolved,
+        resolvedByUserId: 'u7',
+        resolvedByCompany: 'EcoLimpia Bolivia',
+        resolvedAt: now.subtract(const Duration(days: 1, hours: 2)),
+        resolutionComment:
+            'Recolector asignado pasó a retirar el material de reciclaje.',
+      ),
     ];
 
-    await writeData(users, incidents, companies);
+    // ===================== PRODUCTOS TIENDA =====================
+    final products = _defaultProducts();
+
+    await writeData(users, incidents, companies, products: products);
+  }
+
+  List<StoreProductModel> _defaultProducts() {
+    return [
+      StoreProductModel(
+        id: 'p1',
+        name: 'Bicicleta',
+        description: 'Bicicleta eléctrica de alta gama con batería de litio.',
+        imageUrl: 'https://cdn-icons-png.flaticon.com/512/3097/3097174.png',
+        pointsCost: 5000,
+        stock: 20,
+      ),
+      StoreProductModel(
+        id: 'p2',
+        name: 'Alimento para Mascotas',
+        description: 'Alimento nutritivo para perros y gatos. 1Kg.',
+        imageUrl: 'https://cdn-icons-png.flaticon.com/512/3047/3047928.png',
+        pointsCost: 50,
+        stock: 15,
+      ),
+      StoreProductModel(
+        id: 'p3',
+        name: 'Bolsa Reutilizable',
+        description: 'Bolsa plegable ecológica para tus compras.',
+        imageUrl: 'https://cdn-icons-png.flaticon.com/512/4293/4293035.png',
+        pointsCost: 30,
+        stock: 30,
+      ),
+      StoreProductModel(
+        id: 'p4',
+        name: 'Llavero Reciclado',
+        description: 'Llavero artesanal hecho de plástico reciclado.',
+        imageUrl:
+            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSjndazppm_Z0GLpr_K-frkPe-teZSro5dhbw&s',
+        pointsCost: 20,
+        stock: 50,
+      ),
+      StoreProductModel(
+        id: 'p5',
+        name: 'Silla de plástico reciclado',
+        description: 'Silla ergonómica hecha de plástico reciclado.',
+        imageUrl: 'https://cdn-icons-png.flaticon.com/512/2948/2948107.png',
+        pointsCost: 150,
+        stock: 10,
+      ),
+      StoreProductModel(
+        id: 'p6',
+        name: 'Vale de descuento en gasolinera',
+        description:
+            'Vale de descuento de 20% en combustible en estaciones asociadas.',
+        imageUrl: 'https://cdn-icons-png.flaticon.com/512/4607/4607370.png',
+        pointsCost: 200,
+        stock: 8,
+      ),
+      StoreProductModel(
+        id: 'p7',
+        name: 'Vale de descuento en supermercado',
+        description: 'Vale de descuento de 15% en productos seleccionados.',
+        imageUrl: 'https://cdn-icons-png.flaticon.com/512/3144/3144456.png',
+        pointsCost: 120,
+        stock: 12,
+      ),
+      StoreProductModel(
+        id: 'p8',
+        name: 'Kit de producto de limpieza del hogar',
+        description: 'Set de productos de limpieza ecológicos para el hogar.',
+        imageUrl: 'https://cdn-icons-png.flaticon.com/512/4148/4148461.png',
+        pointsCost: 300,
+        stock: 5,
+      ),
+    ];
   }
 }

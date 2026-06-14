@@ -1,4 +1,4 @@
-package com.example.app_mobile
+package com.example.vigilo
 
 import io.flutter.embedding.android.FlutterActivity
 

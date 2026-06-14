@@ -1,10 +1,16 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 import '../../data/datasources/local_json_datasource.dart';
 import '../../data/models/company_model.dart';
 import '../../data/repositories/incident_repository_impl.dart';
 import '../../data/repositories/user_repository_impl.dart';
+import '../../data/models/store_product_model.dart';
 import '../../domain/entities/company.dart';
+import '../../domain/entities/store_product.dart';
 import '../../domain/entities/incident.dart';
 import '../../domain/entities/user.dart';
 
@@ -37,7 +43,7 @@ class AuthNotifier extends Notifier<User?> {
     final prefs = await SharedPreferences.getInstance();
     final savedEmail = prefs.getString('userEmail');
     final savedPassword = prefs.getString('userPassword');
-    
+
     if (savedEmail != null && savedPassword != null) {
       final repo = ref.read(userRepositoryProvider);
       final user = await repo.login(savedEmail, savedPassword);
@@ -64,7 +70,10 @@ class AuthNotifier extends Notifier<User?> {
     if (state == null) return;
     final repo = ref.read(userRepositoryProvider);
     final users = await repo.getUsers();
-    final updatedUser = users.firstWhere((u) => u.id == state!.id, orElse: () => state!);
+    final updatedUser = users.firstWhere(
+      (u) => u.id == state!.id,
+      orElse: () => state!,
+    );
     state = updatedUser;
   }
 
@@ -77,8 +86,13 @@ class AuthNotifier extends Notifier<User?> {
 }
 
 // --- Navigation State ---
-final currentNavIndexProvider = NotifierProvider<NavIndexNotifier, int>(() => NavIndexNotifier());
-final selectedIncidentProvider = NotifierProvider<SelectedIncidentNotifier, Incident?>(() => SelectedIncidentNotifier());
+final currentNavIndexProvider = NotifierProvider<NavIndexNotifier, int>(
+  () => NavIndexNotifier(),
+);
+final selectedIncidentProvider =
+    NotifierProvider<SelectedIncidentNotifier, Incident?>(
+      () => SelectedIncidentNotifier(),
+    );
 
 class NavIndexNotifier extends Notifier<int> {
   @override
@@ -92,8 +106,12 @@ class NavIndexNotifier extends Notifier<int> {
     state = 1;
   }
 
-  void goToProfile() {
+  void goToStore() {
     state = 2;
+  }
+
+  void goToProfile() {
+    state = 3;
   }
 }
 
@@ -111,7 +129,9 @@ class SelectedIncidentNotifier extends Notifier<Incident?> {
 }
 
 // --- Incidents State ---
-final incidentsProvider = NotifierProvider<IncidentsNotifier, List<Incident>>(IncidentsNotifier.new);
+final incidentsProvider = NotifierProvider<IncidentsNotifier, List<Incident>>(
+  IncidentsNotifier.new,
+);
 
 class IncidentsNotifier extends Notifier<List<Incident>> {
   @override
@@ -132,7 +152,7 @@ class IncidentsNotifier extends Notifier<List<Incident>> {
   Future<void> addIncident(Incident incident) async {
     final repo = ref.read(incidentRepositoryProvider);
     await repo.addIncident(incident);
-    
+
     // Gamificación: +3 puntos por reportar
     final authNotifier = ref.read(authProvider.notifier);
     final currentUser = ref.read(authProvider);
@@ -200,7 +220,9 @@ final allUsersProvider = FutureProvider<List<User>>((ref) async {
 });
 
 // --- Companies Provider ---
-final companiesProvider = NotifierProvider<CompaniesNotifier, List<Company>>(() => CompaniesNotifier());
+final companiesProvider = NotifierProvider<CompaniesNotifier, List<Company>>(
+  () => CompaniesNotifier(),
+);
 
 class CompaniesNotifier extends Notifier<List<Company>> {
   @override
@@ -213,7 +235,9 @@ class CompaniesNotifier extends Notifier<List<Company>> {
     final ds = ref.read(localDatasourceProvider);
     final data = await ds.readData();
     final companiesJson = data['companies'] as List<dynamic>;
-    state = companiesJson.map((c) => CompanyModel.fromJson(c as Map<String, dynamic>)).toList();
+    state = companiesJson
+        .map((c) => CompanyModel.fromJson(c as Map<String, dynamic>))
+        .toList();
   }
 
   Future<void> updateCompany(Company company) async {
@@ -228,5 +252,80 @@ class CompaniesNotifier extends Notifier<List<Company>> {
     } catch (e) {
       return null;
     }
+  }
+}
+
+// --- Products Provider ---
+final productsProvider = FutureProvider<List<StoreProduct>>((ref) async {
+  final ds = ref.watch(localDatasourceProvider);
+  final data = await ds.readData();
+  final productsJson = data['products'] as List<dynamic>? ?? [];
+  return productsJson
+      .map((p) => StoreProductModel.fromJson(p as Map<String, dynamic>))
+      .toList();
+});
+
+// --- Current Location (shared simulation + GPS) ---
+final currentLocationProvider = StateProvider<LatLng>((ref) {
+  return const LatLng(-17.783327, -63.182141);
+});
+
+// --- Proximity Alerts ---
+final proximityNotifierProvider =
+    NotifierProvider<ProximityNotifier, List<Incident>>(
+      () => ProximityNotifier(),
+    );
+
+class ProximityNotifier extends Notifier<List<Incident>> {
+  final Set<String> _notifiedIds = {};
+  Timer? _timer;
+
+  @override
+  List<Incident> build() {
+    ref.onDispose(() => _timer?.cancel());
+    return [];
+  }
+
+  void start() {
+    _timer?.cancel();
+    _check();
+    _timer = Timer.periodic(const Duration(seconds: 10), (_) => _check());
+  }
+
+  void stop() {
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  void checkNow() {
+    _check();
+  }
+
+  void _check() {
+    final location = ref.read(currentLocationProvider);
+    final incidents = ref.read(incidentsProvider);
+    final user = ref.read(authProvider);
+    if (user == null) return;
+
+    final activeIncidents = incidents
+        .where((i) => i.status == IncidentStatus.active)
+        .toList();
+
+    for (final incident in activeIncidents) {
+      final distance = Geolocator.distanceBetween(
+        location.latitude,
+        location.longitude,
+        incident.location.latitude,
+        incident.location.longitude,
+      );
+      if (distance <= 200 && !_notifiedIds.contains(incident.id)) {
+        _notifiedIds.add(incident.id);
+        state = [...state, incident];
+      }
+    }
+  }
+
+  void dismissAlert(String incidentId) {
+    state = state.where((i) => i.id != incidentId).toList();
   }
 }

@@ -8,19 +8,24 @@ import '../theme/app_colors.dart';
 
 class IncidentDetailModal extends ConsumerWidget {
   final Incident incident;
+  final bool isWithinRange;
 
-  const IncidentDetailModal({super.key, required this.incident});
+  const IncidentDetailModal({
+    super.key,
+    required this.incident,
+    this.isWithinRange = true,
+  });
 
   bool _canResolveIncident(User? user) {
-    if (user == null || !user.isEmployee) return false;
+    if (user == null) return false;
     if (incident.status == IncidentStatus.resolved) return false;
 
     switch (incident.type) {
       case IncidentType.insecurity:
-        return user.roles.contains(UserRole.security);
+        return user.isEmployee && user.roles.contains(UserRole.security);
       case IncidentType.trash:
       case IncidentType.weeds:
-        return user.roles.contains(UserRole.cleaning);
+        return user.isEmployee && user.roles.contains(UserRole.cleaning);
       case IncidentType.recycling:
         return user.roles.contains(UserRole.recycling);
     }
@@ -67,8 +72,10 @@ class IncidentDetailModal extends ConsumerWidget {
                 return;
               }
 
-              final companyId = currentUser.companyId ?? '';
-              final companyName = currentUser.companyId ?? '';
+              final companyId = currentUser.companyId ?? 'citizen';
+              final companyName = currentUser.isEmployee
+                  ? (currentUser.companyId ?? 'Ciudadano')
+                  : 'Ciudadano';
 
               await ref.read(incidentsProvider.notifier).resolveIncident(
                 incidentId: incident.id,
@@ -245,13 +252,39 @@ class IncidentDetailModal extends ConsumerWidget {
                     if (validators.isNotEmpty)
                       Text('Validado por ${validators.length} persona(s): ${validators.map((e) => e.name).join(", ")}', 
                            style: const TextStyle(color: AppColors.primary, fontSize: 13)),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
+                    if (incident.status == IncidentStatus.active && !isWithinRange)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondary.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.secondary.withOpacity(0.25), width: 1),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.lock, color: AppColors.secondary, size: 20),
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Text(
+                                '🔒 Alerta fuera del rango de radar (200m). Acércate físicamente para poder Validar o Resolver.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.secondary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         if (incident.status == IncidentStatus.active && currentUser != null)
                           OutlinedButton.icon(
-                            onPressed: (hasValidated || isOwner) ? null : () async {
+                            onPressed: (hasValidated || isOwner || !isWithinRange) ? null : () async {
                               await ref.read(incidentsProvider.notifier).validateIncident(incident.id, currentUser.id);
                               if (context.mounted) Navigator.pop(context);
                             },
@@ -259,15 +292,17 @@ class IncidentDetailModal extends ConsumerWidget {
                             label: Text(hasValidated ? 'Ya lo validaste' : 'Validar'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.primary,
-                              side: BorderSide(color: (hasValidated || isOwner) ? Colors.grey : AppColors.primary),
+                              side: BorderSide(color: (hasValidated || isOwner || !isWithinRange) ? Colors.grey : AppColors.primary),
                             ),
                           ),
-                        if (canResolve)
+                        if (canResolve || (_canResolveIncident(currentUser) && !isWithinRange))
                           FilledButton.icon(
-                            onPressed: () => _showResolveDialog(context, ref, currentUser!),
+                            onPressed: !isWithinRange ? null : () => _showResolveDialog(context, ref, currentUser!),
                             icon: const Icon(Icons.check),
                             label: const Text('Resolver'),
-                            style: FilledButton.styleFrom(backgroundColor: AppColors.success),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: !isWithinRange ? Colors.grey : AppColors.success,
+                            ),
                           ),
                       ],
                     ),
