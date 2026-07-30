@@ -8,6 +8,7 @@ class StoreProductModel extends StoreProduct {
     required super.imageUrl,
     required super.pointsCost,
     super.stock,
+    super.category,
   });
 
   factory StoreProductModel.fromJson(Map<String, dynamic> json) {
@@ -18,6 +19,7 @@ class StoreProductModel extends StoreProduct {
       imageUrl: json['imageUrl'] ?? '',
       pointsCost: json['pointsCost'] ?? 0,
       stock: json['stock'] ?? 10,
+      category: json['category'] ?? 'General',
     );
   }
 
@@ -29,6 +31,7 @@ class StoreProductModel extends StoreProduct {
       'imageUrl': imageUrl,
       'pointsCost': pointsCost,
       'stock': stock,
+      'category': category,
     };
   }
 
@@ -40,6 +43,7 @@ class StoreProductModel extends StoreProduct {
       imageUrl: entity.imageUrl,
       pointsCost: entity.pointsCost,
       stock: entity.stock,
+      category: entity.category,
     );
   }
 }

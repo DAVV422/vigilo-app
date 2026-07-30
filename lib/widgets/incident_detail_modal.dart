@@ -168,7 +168,12 @@ class IncidentDetailModal extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          Text(incident.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Text(incident.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

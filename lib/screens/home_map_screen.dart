@@ -2,15 +2,24 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' hide Path;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../theme/app_colors.dart';
 import '../domain/entities/incident.dart';
+import '../domain/entities/user.dart';
 import '../presentation/providers/providers.dart';
+import '../theme/app_colors.dart';
+import 'new_report_screen.dart';
+import 'publish_material_screen.dart';
 import '../widgets/report_bottom_sheet.dart';
 import '../widgets/incident_detail_modal.dart';
+import '../widgets/filter_bottom_sheet.dart';
+import 'store_screen.dart';
+import 'points_screen.dart';
+import 'kpi_screen.dart';
+import 'impact_screen.dart';
+import 'collections_screen.dart';
 
 class HomeMapScreen extends ConsumerStatefulWidget {
   final Incident? incidentToShow;
@@ -30,12 +39,34 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
   bool _isLocating = true;
 
   // Filtros activos
-  final Set<IncidentType> _activeFilters = {
+  Set<IncidentType> _activeTypes = {
     IncidentType.insecurity,
     IncidentType.trash,
     IncidentType.weeds,
     IncidentType.recycling,
   };
+  Set<String> _activeSeverities = {'Baja', 'Media', 'Alta', 'Crítica'};
+  Set<String> _activeStatuses = {'Recibido', 'En revisión', 'En gestión', 'Rechazado', 'Vencido'};
+
+  void _openFilterBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => FilterBottomSheet(
+        initialTypes: _activeTypes,
+        initialSeverities: _activeSeverities,
+        initialStatuses: _activeStatuses,
+        onApply: (types, severities, statuses) {
+          setState(() {
+            _activeTypes = types;
+            _activeSeverities = severities;
+            _activeStatuses = statuses;
+          });
+        },
+      ),
+    );
+  }
 
   // Flujo de creación de reporte
   bool _isSelectingLocation = false;
@@ -252,13 +283,117 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => ReportBottomSheet(
-        onTypeSelected: (type) {
-          setState(() {
-            _selectedTypeForReport = type;
-            _isSelectingLocation = true;
-          });
-        },
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('¿Qué quieres reportar?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87)),
+                InkWell(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: Colors.grey.shade100, shape: BoxShape.circle),
+                    child: const Icon(Icons.close, size: 20, color: Colors.black54),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildModalOption(
+              icon: Icons.warning_amber_rounded,
+              title: 'Reporte urbano',
+              subtitle: 'Bache, basura, alumbrado, inseguridad...',
+              color: Colors.orange,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const NewReportScreen()));
+              },
+            ),
+            _buildModalOption(
+              icon: Icons.recycling,
+              title: 'Publicar material reciclable',
+              subtitle: 'Plástico, cartón, vidrio para ser recogido',
+              color: Colors.green,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const PublishMaterialScreen()));
+              },
+            ),
+            _buildModalOption(
+              icon: Icons.check_circle_outline,
+              title: 'Confirmar alertas cerca de mí',
+              subtitle: '2 reportes pendientes en tu zona',
+              color: Colors.blue,
+              badge: 2,
+              onTap: () {
+                Navigator.pop(context);
+                ref.read(currentNavIndexProvider.notifier).setIndex(1); // Notifications/Alerts
+              },
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModalOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required MaterialColor color,
+    int? badge,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.shade50,
+          border: Border.all(color: color.shade200),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color.shade700, size: 30),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyle(color: color.shade900, fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: TextStyle(color: color.shade700, fontSize: 12)),
+                ],
+              ),
+            ),
+            if (badge != null)
+              Container(
+                padding: const EdgeInsets.all(6),
+                margin: const EdgeInsets.only(right: 8),
+                decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                child: Text('$badge', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+              ),
+            Icon(Icons.chevron_right, color: color.shade300),
+          ],
+        ),
       ),
     );
   }
@@ -336,9 +471,37 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
     final incidents = ref.watch(incidentsProvider);
     final activeIncidents = incidents.where((i) => i.status == IncidentStatus.active).toList();
 
-    // Marcadores de incidentes filtrados (solo incidentes activos)
+    // Marcadores de incidentes filtrados
     final filteredIncidents = incidents.where((incident) {
-      return _activeFilters.contains(incident.type) && incident.status == IncidentStatus.active;
+      if (!_activeTypes.contains(incident.type)) return false;
+
+      String incidentSeverity;
+      switch (incident.type) {
+        case IncidentType.insecurity:
+          incidentSeverity = 'Crítica';
+          break;
+        case IncidentType.trash:
+          incidentSeverity = 'Alta';
+          break;
+        case IncidentType.weeds:
+          incidentSeverity = 'Media';
+          break;
+        case IncidentType.recycling:
+          incidentSeverity = 'Baja';
+          break;
+      }
+      if (!_activeSeverities.contains(incidentSeverity)) return false;
+
+      // Ocultar siempre los reportes resueltos
+      if (incident.status == IncidentStatus.resolved) return false;
+
+      bool hasActiveStatusSelected = _activeStatuses.contains('Recibido') ||
+          _activeStatuses.contains('En revisión') ||
+          _activeStatuses.contains('En gestión');
+          
+      if (!hasActiveStatusSelected) return false;
+
+      return true;
     }).toList();
 
     List<Marker> markers = filteredIncidents.map((incident) {
@@ -474,35 +637,19 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
               ),
             ),
 
-          // 3. BARRA DE FILTROS SUPERIOR (INTERACTIVOS)
+          // 3. BOTÓN DE FILTRO SUPERIOR DERECHO
           if (!_isSelectingLocation)
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 8.0,
-                ),
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: Container(
-                    height: 50,
-                    margin: const EdgeInsets.only(left: 56), // Dejar espacio al menú sidebar
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _buildFilterChip(IncidentType.insecurity, 'Inseguridad', AppColors.secondary),
-                          const SizedBox(width: 8),
-                          _buildFilterChip(IncidentType.trash, 'Basura', AppColors.neutralTrash),
-                          const SizedBox(width: 8),
-                          _buildFilterChip(IncidentType.weeds, 'Maleza', AppColors.warning),
-                          const SizedBox(width: 8),
-                          _buildFilterChip(IncidentType.recycling, 'Reciclaje', AppColors.ecoGreen),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 8,
+              right: 16,
+              child: FloatingActionButton(
+                mini: true,
+                heroTag: 'filter_btn',
+                backgroundColor: Colors.white,
+                foregroundColor: AppColors.primary,
+                elevation: 4,
+                onPressed: _openFilterBottomSheet,
+                child: const Icon(Icons.tune, size: 22),
               ),
             ),
 
@@ -607,24 +754,65 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
               ),
             ),
 
-          // 6. LA BARRA LATERAL DESLIZANTE (GLASSMORPHIC SIDEBAR)
+          // 6. OVERLAY OSCURO PARA CERRAR SIDEBAR
+          if (_isSidebarOpen)
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _isSidebarOpen = false;
+                });
+              },
+              child: Container(
+                color: Colors.black54,
+              ),
+            ),
+
+          // 7. LA BARRA LATERAL DESLIZANTE (GLASSMORPHIC SIDEBAR)
           _buildGlassmorphicSidebar(context, incidents, activeIncidents),
         ],
       ),
-      floatingActionButton: _isSelectingLocation
-          ? FloatingActionButton.extended(
-              onPressed: _promptForDescription,
-              backgroundColor: AppColors.primaryContainer,
-              icon: const Icon(Icons.check, color: Colors.white),
-              label: const Text(
-                'Confirmar Ubicación',
-                style: TextStyle(color: Colors.white),
-              ),
+      floatingActionButton: _isSidebarOpen
+          ? null
+          : _isSelectingLocation
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                FloatingActionButton.extended(
+                  heroTag: 'cancel_report_btn',
+                  onPressed: () {
+                    setState(() {
+                      _isSelectingLocation = false;
+                      _selectedTypeForReport = null;
+                    });
+                  },
+                  backgroundColor: Colors.white,
+                  icon: const Icon(Icons.close, color: Colors.grey),
+                  label: const Text(
+                    'Cancelar',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                FloatingActionButton.extended(
+                  heroTag: 'confirm_report_btn',
+                  onPressed: _promptForDescription,
+                  backgroundColor: AppColors.primaryContainer,
+                  icon: const Icon(Icons.check, color: Colors.white),
+                  label: const Text(
+                    'Confirmar Ubicación',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
             )
           : FloatingActionButton.extended(
+              heroTag: 'start_report_btn',
               onPressed: _startReportFlow,
               backgroundColor: AppColors.primary,
-              icon: const Icon(Icons.add_alert, color: Colors.white),
+              icon: const Icon(Icons.add, color: Colors.white),
               label: const Text(
                 'Reportar',
                 style: TextStyle(
@@ -637,62 +825,15 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
     );
   }
 
-  // Widget de barra de filtros interactiva
-  Widget _buildFilterChip(IncidentType type, String label, Color color) {
-    final bool isActive = _activeFilters.contains(type);
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          if (isActive) {
-            _activeFilters.remove(type);
-          } else {
-            _activeFilters.add(type);
-          }
-        });
-      },
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 200),
-        opacity: isActive ? 1.0 : 0.45,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: isActive ? Border.all(color: color, width: 2) : null,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                  color: isActive ? Colors.black : Colors.grey.shade600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
 
   // Componente del Sidebar deslizable
   Widget _buildGlassmorphicSidebar(BuildContext context, List<Incident> allIncidents, List<Incident> activeIncidents) {
-    final double sidebarWidth = 290.0;
+    final double sidebarWidth = MediaQuery.of(context).size.width * 0.75;
+    final user = ref.watch(authProvider);
+    final userName = user?.name ?? 'Carlos Mendoza';
+    final userInitials = userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : 'C';
+    final userPoints = user?.points ?? 350;
 
     return AnimatedPositioned(
       duration: const Duration(milliseconds: 300),
@@ -703,257 +844,218 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
       child: Container(
         width: sidebarWidth,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.88),
-          borderRadius: const BorderRadius.only(
-            topRight: Radius.circular(24),
-            bottomRight: Radius.circular(24),
-          ),
+          color: Colors.white, // Modo Claro
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.18),
-              blurRadius: 15,
-              offset: const Offset(4, 0),
-            ),
+            if (_isSidebarOpen)
+              BoxShadow(
+                color: Colors.black.withOpacity(0.5),
+                blurRadius: 15,
+                offset: const Offset(4, 0),
+              ),
           ],
         ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.only(
-            topRight: Radius.circular(24),
-            bottomRight: Radius.circular(24),
-          ),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        child: SafeArea(
+          child: Column(
+            children: [
+              // 2. Cabecera (Header)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 16, 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Cabecera del Sidebar
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.asset('assets/app_icon.jpg', fit: BoxFit.cover),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.analytics, color: AppColors.primary, size: 24),
-                            const SizedBox(width: 8),
                             const Text(
-                              'Estado de Zona',
+                              'VIGILO',
                               style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
                                 color: AppColors.onBackground,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                            Text(
+                              'Tu ciudad, tu guardia',
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w400,
                               ),
                             ),
                           ],
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () {
-                            setState(() {
-                              _isSidebarOpen = false;
-                            });
-                          },
-                        ),
                       ],
                     ),
-                    const Divider(),
-                    const SizedBox(height: 6),
-                    // Resumen y contadores
-                    _buildSidebarCounters(activeIncidents),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'LISTADO DE REPORTES ACTIVOS',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                        letterSpacing: 1.2,
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          _isSidebarOpen = false;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.close, color: Colors.black87, size: 18),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    // Lista de incidentes
-                    Expanded(
-                      child: activeIncidents.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'No hay reportes activos en la ciudad.',
-                                style: TextStyle(color: Colors.grey, fontSize: 13),
-                              ),
-                            )
-                          : ListView.builder(
-                              physics: const BouncingScrollPhysics(),
-                              itemCount: activeIncidents.length,
-                              itemBuilder: (context, index) {
-                                final incident = activeIncidents[index];
-                                final double distance = Geolocator.distanceBetween(
-                                  _currentLocation.latitude,
-                                  _currentLocation.longitude,
-                                  incident.location.latitude,
-                                  incident.location.longitude,
-                                );
-                                return _buildSidebarCard(incident, distance);
-                              },
-                            ),
                     ),
                   ],
                 ),
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Sub-componente de contadores por categoría
-  Widget _buildSidebarCounters(List<Incident> activeIncidents) {
-    int insecurity = activeIncidents.where((i) => i.type == IncidentType.insecurity).length;
-    int trash = activeIncidents.where((i) => i.type == IncidentType.trash).length;
-    int weeds = activeIncidents.where((i) => i.type == IncidentType.weeds).length;
-    int recycling = activeIncidents.where((i) => i.type == IncidentType.recycling).length;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceVariant.withOpacity(0.4),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.5)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Reportes Activos:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(10),
+              Divider(color: Colors.grey.shade200, height: 1, thickness: 1),
+              
+              // 3. Cuerpo de Navegación (Opciones del Menú)
+              Expanded(
+                child: ListView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  children: [
+                    _buildDrawerItem(Icons.notifications_none, 'Notificaciones', () {
+                      setState(() {
+                        _isSidebarOpen = false;
+                      });
+                      Future.delayed(const Duration(milliseconds: 250), () {
+                        if (mounted) {
+                          ref.read(currentNavIndexProvider.notifier).setIndex(1);
+                        }
+                      });
+                    }),
+                    _buildDrawerItem(Icons.bar_chart, 'KPIs de Gestión', () {
+                      setState(() {
+                        _isSidebarOpen = false;
+                      });
+                      Future.delayed(const Duration(milliseconds: 250), () {
+                        if (mounted) {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const KpiScreen()));
+                        }
+                      });
+                    }),
+                    _buildDrawerItem(Icons.trending_up, 'Impacto Ciudad', () {
+                      setState(() {
+                        _isSidebarOpen = false;
+                      });
+                      Future.delayed(const Duration(milliseconds: 250), () {
+                        if (mounted) {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const ImpactScreen()));
+                        }
+                      });
+                    }),
+                    _buildDrawerItem(Icons.shopping_bag_outlined, 'Marketplace', () {
+                      setState(() {
+                        _isSidebarOpen = false;
+                      });
+                      Future.delayed(const Duration(milliseconds: 250), () {
+                        if (mounted) {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreScreen()));
+                        }
+                      });
+                    }),
+                    _buildDrawerItem(Icons.star_border, 'Mis Puntos', () {
+                      setState(() {
+                        _isSidebarOpen = false;
+                      });
+                      Future.delayed(const Duration(milliseconds: 250), () {
+                        if (mounted) {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const PointsScreen()));
+                        }
+                      });
+                    }),
+                    _buildDrawerItem(Icons.recycling, 'Mis Recolecciones', () {
+                      setState(() {
+                        _isSidebarOpen = false;
+                      });
+                      Future.delayed(const Duration(milliseconds: 250), () {
+                        if (mounted) {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionsScreen()));
+                        }
+                      });
+                    }),
+                  ],
                 ),
-                child: Text(
-                  '${activeIncidents.length}',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+
+              // 4. Pie de página (Perfil de Usuario)
+              Divider(color: Colors.grey.shade200, height: 1, thickness: 1),
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: AppColors.primary,
+                      child: Text(
+                        userInitials,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          userName,
+                          style: const TextStyle(
+                            color: AppColors.onBackground,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$userPoints puntos',
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildCounterItem('🚨', insecurity, AppColors.secondary),
-              _buildCounterItem('🗑️', trash, AppColors.neutralTrash),
-              _buildCounterItem('🌿', weeds, AppColors.warning),
-              _buildCounterItem('♻️', recycling, AppColors.ecoGreen),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCounterItem(String emoji, int count, Color color) {
-    return Column(
-      children: [
-        Text(emoji, style: const TextStyle(fontSize: 18)),
-        const SizedBox(height: 2),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Text(
-            '$count',
-            style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 10),
-          ),
         ),
-      ],
+      ),
     );
   }
 
-  // Tarjeta de cada incidente en el sidebar
-  Widget _buildSidebarCard(Incident incident, double distance) {
-    Color color;
-    String emoji;
-    switch (incident.type) {
-      case IncidentType.insecurity:
-        color = AppColors.secondary;
-        emoji = '🚨';
-        break;
-      case IncidentType.trash:
-        color = AppColors.neutralTrash;
-        emoji = '🗑️';
-        break;
-      case IncidentType.weeds:
-        color = AppColors.warning;
-        emoji = '🌿';
-        break;
-      case IncidentType.recycling:
-        color = AppColors.ecoGreen;
-        emoji = '♻️';
-        break;
-    }
-
-    final bool inRange = distance <= 200;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: inRange ? color.withOpacity(0.5) : Colors.transparent, width: 1.5),
-      ),
+  Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) {
+    return Material(
+      color: Colors.transparent,
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        dense: true,
-        leading: Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          alignment: Alignment.center,
-          child: Text(emoji, style: const TextStyle(fontSize: 16)),
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+        leading: Icon(icon, color: Colors.grey.shade600, size: 24),
         title: Text(
-          incident.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          title,
+          style: const TextStyle(
+            color: AppColors.onBackground,
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
         ),
-        subtitle: Row(
-          children: [
-            Icon(
-              inRange ? Icons.radar : Icons.lock,
-              size: 11,
-              color: inRange ? AppColors.primary : Colors.grey,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              '${distance.toInt()}m ${inRange ? "¡Cerca!" : "Lejos"}',
-              style: TextStyle(
-                fontSize: 10,
-                color: inRange ? AppColors.primary : Colors.grey,
-                fontWeight: inRange ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-        onTap: () {
-          setState(() {
-            _isSidebarOpen = false;
-          });
-          _mapController.move(incident.location, 16.5);
-          Future.delayed(const Duration(milliseconds: 350), () {
-            if (mounted) {
-              _showIncidentDetail(incident);
-            }
-          });
-        },
+        trailing: Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 20),
+        onTap: onTap,
       ),
     );
   }
@@ -1065,6 +1167,61 @@ class _HeroLocationMarkerWidgetState extends State<HeroLocationMarkerWidget> wit
 }
 
 // 2. PIN DE INCIDENTES (FLOTACIÓN Y PULSACIÓN)
+class PinPainter extends CustomPainter {
+  final Color color;
+  final Color fillColor;
+  final bool hasShadow;
+  final Color shadowColor;
+
+  PinPainter({
+    required this.color,
+    required this.fillColor,
+    this.hasShadow = true,
+    required this.shadowColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = fillColor
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final borderPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0
+      ..strokeJoin = StrokeJoin.round
+      ..isAntiAlias = true;
+
+    final path = Path();
+    final radius = size.width / 2;
+    final center = Offset(size.width / 2, radius);
+
+    path.arcTo(
+      Rect.fromCircle(center: center, radius: radius),
+      math.pi * 0.75,
+      math.pi * 1.5,
+      false,
+    );
+
+    path.lineTo(size.width / 2, size.height);
+    path.close();
+
+    if (hasShadow) {
+      canvas.drawShadow(path, shadowColor, 4.0, true);
+    }
+    canvas.drawPath(path, paint);
+    canvas.drawPath(path, borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant PinPainter oldDelegate) =>
+      color != oldDelegate.color ||
+      fillColor != oldDelegate.fillColor ||
+      shadowColor != oldDelegate.shadowColor;
+}
+
 class PulsingMarkerWidget extends StatefulWidget {
   final Color color;
   final IconData iconData;
@@ -1165,41 +1322,39 @@ class _PulsingMarkerWidgetState extends State<PulsingMarkerWidget> with TickerPr
               child: child,
             );
           },
-          child: Container(
+          child: SizedBox(
             width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: widget.isWithinRange ? Colors.white : Colors.grey.shade200,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: widget.isWithinRange ? widget.color : Colors.grey.shade400,
-                width: widget.isWithinRange ? 3 : 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: (widget.isWithinRange ? widget.color : Colors.black).withOpacity(widget.isWithinRange ? 0.35 : 0.15),
-                  blurRadius: widget.isWithinRange ? 8 : 4,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
+            height: 48,
             child: Stack(
-              alignment: Alignment.center,
+              alignment: Alignment.topCenter,
+              clipBehavior: Clip.none,
               children: [
-                Icon(
-                  widget.iconData,
-                  color: widget.isWithinRange ? widget.color : Colors.grey,
-                  size: 20,
+                CustomPaint(
+                  size: const Size(36, 48),
+                  painter: PinPainter(
+                    color: widget.isWithinRange ? widget.color : Colors.grey.shade400,
+                    fillColor: widget.isWithinRange ? Colors.white : Colors.grey.shade200,
+                    shadowColor: widget.isWithinRange ? widget.color : Colors.black,
+                  ),
+                ),
+                Positioned(
+                  top: 9,
+                  child: Icon(
+                    widget.iconData,
+                    color: widget.isWithinRange ? widget.color : Colors.grey,
+                    size: 18,
+                  ),
                 ),
                 if (!widget.isWithinRange && widget.isActive)
                   Positioned(
                     right: -2,
-                    bottom: -2,
+                    top: -2,
                     child: Container(
                       padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
+                        border: Border.all(color: Colors.grey.shade300),
                       ),
                       child: const Icon(
                         Icons.lock,

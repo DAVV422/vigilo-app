@@ -17,8 +17,6 @@ class MainWrapperScreen extends ConsumerStatefulWidget {
 }
 
 class _MainWrapperScreenState extends ConsumerState<MainWrapperScreen> {
-  bool _isShowingProximityDialog = false;
-
   @override
   void initState() {
     super.initState();
@@ -37,25 +35,7 @@ class _MainWrapperScreenState extends ConsumerState<MainWrapperScreen> {
   Widget build(BuildContext context) {
     final currentIndex = ref.watch(currentNavIndexProvider);
     final selectedIncident = ref.watch(selectedIncidentProvider);
-
-    ref.listen<List<Incident>>(proximityNotifierProvider, (prev, next) {
-      if (next.isNotEmpty && !_isShowingProximityDialog) {
-        _isShowingProximityDialog = true;
-        final incident = next.first;
-        showDialog(
-          context: context,
-          builder: (ctx) => ProximityAlertDialog(
-            incident: incident,
-            onDismiss: () {
-              ref
-                  .read(proximityNotifierProvider.notifier)
-                  .dismissAlert(incident.id);
-              _isShowingProximityDialog = false;
-            },
-          ),
-        ).then((_) => _isShowingProximityDialog = false);
-      }
-    });
+    final proximityIncidents = ref.watch(proximityNotifierProvider);
 
     Widget currentScreen;
     switch (currentIndex) {
@@ -76,13 +56,35 @@ class _MainWrapperScreenState extends ConsumerState<MainWrapperScreen> {
     }
 
     return Scaffold(
-      body: currentScreen,
+      body: Stack(
+        children: [
+          currentScreen,
+          if (proximityIncidents.isNotEmpty)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 16.0,
+              child: SafeArea(
+                child: ProximityAlertDialog(
+                  incident: proximityIncidents.first,
+                  onDismiss: (permanently) {
+                    if (permanently) {
+                      ref.read(proximityNotifierProvider.notifier).permanentlyDismissAlert(proximityIncidents.first.id);
+                    } else {
+                      ref.read(proximityNotifierProvider.notifier).dismissAlert(proximityIncidents.first.id);
+                    }
+                  },
+                ),
+              ),
+            ),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: currentIndex,
         selectedItemColor: AppColors.primary,
         unselectedItemColor: Colors.grey,
         onTap: (index) {
-          ref.read(currentNavIndexProvider.notifier).state = index;
+          ref.read(currentNavIndexProvider.notifier).setIndex(index);
           if (index != 0) {
             ref.read(selectedIncidentProvider.notifier).clear();
           }

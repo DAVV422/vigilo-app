@@ -382,6 +382,7 @@ class LocalJsonDatasource {
         imageUrl: 'https://cdn-icons-png.flaticon.com/512/3097/3097174.png',
         pointsCost: 5000,
         stock: 20,
+        category: 'Vehículos',
       ),
       StoreProductModel(
         id: 'p2',
@@ -390,6 +391,7 @@ class LocalJsonDatasource {
         imageUrl: 'https://cdn-icons-png.flaticon.com/512/3047/3047928.png',
         pointsCost: 50,
         stock: 15,
+        category: 'Mascotas',
       ),
       StoreProductModel(
         id: 'p3',
@@ -398,6 +400,7 @@ class LocalJsonDatasource {
         imageUrl: 'https://cdn-icons-png.flaticon.com/512/4293/4293035.png',
         pointsCost: 30,
         stock: 30,
+        category: 'Ecológico',
       ),
       StoreProductModel(
         id: 'p4',
@@ -407,6 +410,7 @@ class LocalJsonDatasource {
             'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSjndazppm_Z0GLpr_K-frkPe-teZSro5dhbw&s',
         pointsCost: 20,
         stock: 50,
+        category: 'Accesorios',
       ),
       StoreProductModel(
         id: 'p5',
@@ -415,6 +419,7 @@ class LocalJsonDatasource {
         imageUrl: 'https://cdn-icons-png.flaticon.com/512/2948/2948107.png',
         pointsCost: 150,
         stock: 10,
+        category: 'Hogar',
       ),
       StoreProductModel(
         id: 'p6',
@@ -424,6 +429,7 @@ class LocalJsonDatasource {
         imageUrl: 'https://cdn-icons-png.flaticon.com/512/4607/4607370.png',
         pointsCost: 200,
         stock: 8,
+        category: 'Cupones',
       ),
       StoreProductModel(
         id: 'p7',
@@ -432,6 +438,7 @@ class LocalJsonDatasource {
         imageUrl: 'https://cdn-icons-png.flaticon.com/512/3144/3144456.png',
         pointsCost: 120,
         stock: 12,
+        category: 'Cupones',
       ),
       StoreProductModel(
         id: 'p8',
@@ -440,6 +447,7 @@ class LocalJsonDatasource {
         imageUrl: 'https://cdn-icons-png.flaticon.com/512/4148/4148461.png',
         pointsCost: 300,
         stock: 5,
+        category: 'Hogar',
       ),
     ];
   }

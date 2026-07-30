@@ -98,6 +98,10 @@ class NavIndexNotifier extends Notifier<int> {
   @override
   int build() => 0;
 
+  void setIndex(int index) {
+    state = index;
+  }
+
   void goToMap() {
     state = 0;
   }
@@ -278,6 +282,7 @@ final proximityNotifierProvider =
 
 class ProximityNotifier extends Notifier<List<Incident>> {
   final Set<String> _notifiedIds = {};
+  final Set<String> _permanentlyDismissedIds = {};
   Timer? _timer;
 
   @override
@@ -311,6 +316,8 @@ class ProximityNotifier extends Notifier<List<Incident>> {
         .where((i) => i.status == IncidentStatus.active)
         .toList();
 
+    final Set<String> currentlyInRange = {};
+
     for (final incident in activeIncidents) {
       final distance = Geolocator.distanceBetween(
         location.latitude,
@@ -318,14 +325,33 @@ class ProximityNotifier extends Notifier<List<Incident>> {
         incident.location.latitude,
         incident.location.longitude,
       );
-      if (distance <= 200 && !_notifiedIds.contains(incident.id)) {
-        _notifiedIds.add(incident.id);
-        state = [...state, incident];
+      if (distance <= 200) {
+        currentlyInRange.add(incident.id);
+        if (!_notifiedIds.contains(incident.id) && !_permanentlyDismissedIds.contains(incident.id)) {
+          _notifiedIds.add(incident.id);
+          state = [...state, incident];
+        }
+      }
+    }
+    
+    // Remove from notified if they are no longer in range!
+    _notifiedIds.removeWhere((id) => !currentlyInRange.contains(id));
+
+    // Remove from state if they are no longer in range (auto-dismiss)
+    if (state.isNotEmpty) {
+      final newState = state.where((i) => currentlyInRange.contains(i.id)).toList();
+      if (newState.length != state.length) {
+        state = newState;
       }
     }
   }
 
   void dismissAlert(String incidentId) {
+    state = state.where((i) => i.id != incidentId).toList();
+  }
+
+  void permanentlyDismissAlert(String incidentId) {
+    _permanentlyDismissedIds.add(incidentId);
     state = state.where((i) => i.id != incidentId).toList();
   }
 }

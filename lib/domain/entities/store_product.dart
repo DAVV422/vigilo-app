@@ -5,6 +5,7 @@ class StoreProduct {
   final String imageUrl;
   final int pointsCost;
   final int stock;
+  final String category;
 
   StoreProduct({
     required this.id,
@@ -13,6 +14,7 @@ class StoreProduct {
     required this.imageUrl,
     required this.pointsCost,
     this.stock = 10,
+    this.category = 'General',
   });
 
   StoreProduct copyWith({
@@ -22,6 +24,7 @@ class StoreProduct {
     String? imageUrl,
     int? pointsCost,
     int? stock,
+    String? category,
   }) {
     return StoreProduct(
       id: id ?? this.id,
@@ -30,6 +33,7 @@ class StoreProduct {
       imageUrl: imageUrl ?? this.imageUrl,
       pointsCost: pointsCost ?? this.pointsCost,
       stock: stock ?? this.stock,
+      category: category ?? this.category,
     );
   }
 }
