@@ -6,20 +6,25 @@ import 'package:latlong2/latlong.dart' hide Path;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../domain/entities/incident.dart';
-import '../domain/entities/user.dart';
-import '../presentation/providers/providers.dart';
-import '../theme/app_colors.dart';
-import 'new_report_screen.dart';
-import 'publish_material_screen.dart';
-import '../widgets/report_bottom_sheet.dart';
-import '../widgets/incident_detail_modal.dart';
-import '../widgets/filter_bottom_sheet.dart';
-import 'store_screen.dart';
-import 'points_screen.dart';
-import 'kpi_screen.dart';
-import 'impact_screen.dart';
-import 'collections_screen.dart';
+import '../../../domain/entities/incident.dart';
+import '../../../domain/entities/user.dart';
+import '../../providers/providers.dart';
+import '../../../theme/app_colors.dart';
+import '../../../widgets/widgets.dart';
+import '../../widgets/report/report_modal_dialog.dart';
+import '../report/new_report_screen.dart';
+import '../../../screens/publish_material_screen.dart';
+import '../../../widgets/report_bottom_sheet.dart';
+import '../../../widgets/incident_detail_modal.dart';
+import '../../../screens/store_screen.dart';
+import '../../../screens/points_screen.dart';
+import '../alerts/confirm_alerts_screen.dart';
+import '../../../screens/kpi_screen.dart';
+import '../../../screens/impact_screen.dart';
+import '../../../screens/collections_screen.dart';
+import '../../widgets/map/map_alert_summary_sheet.dart';
+import '../../../widgets/main_app_bar.dart';
+import '../../../theme/app_icons.dart';
 
 class HomeMapScreen extends ConsumerStatefulWidget {
   final Incident? incidentToShow;
@@ -48,22 +53,35 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
   Set<String> _activeSeverities = {'Baja', 'Media', 'Alta', 'Crítica'};
   Set<String> _activeStatuses = {'Recibido', 'En revisión', 'En gestión', 'Rechazado', 'Vencido'};
 
-  void _openFilterBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => FilterBottomSheet(
-        initialTypes: _activeTypes,
-        initialSeverities: _activeSeverities,
-        initialStatuses: _activeStatuses,
-        onApply: (types, severities, statuses) {
-          setState(() {
-            _activeTypes = types;
-            _activeSeverities = severities;
-            _activeStatuses = statuses;
-          });
-        },
+  bool _isFilterViewActive = false;
+  String _selectedMainFilter = 'Todos';
+  String _selectedSubFilter = '';
+
+  Widget _buildFilterChip(String label, bool isSelected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: isSelected ? null : Border.all(color: Colors.grey.shade200),
+          boxShadow: isSelected ? [
+            BoxShadow(
+              color: AppColors.primary.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            )
+          ] : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
       ),
     );
   }
@@ -234,28 +252,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
         }
       }
     }
-
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.radar, color: Colors.white),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                nearbyCount > 0
-                    ? '¡Radar activo! Detectados $nearbyCount reportes en tu rango de 200m.'
-                    : 'Radar escaneado. No hay reportes activos en tu rango inmediato.',
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: AppColors.primaryContainer,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-      ),
-    );
   }
 
   void _showIncidentDetail(Incident incident) {
@@ -265,136 +261,26 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
       incident.location.latitude,
       incident.location.longitude,
     );
-    final bool isWithinRange = distance <= 200 || incident.status == IncidentStatus.resolved;
+    final distanceText = distance < 1000
+        ? '${distance.toInt()} m'
+        : '${(distance / 1000).toStringAsFixed(1)} km';
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => IncidentDetailModal(
+      builder: (context) => MapAlertSummarySheet(
         incident: incident,
-        isWithinRange: isWithinRange,
+        distanceText: distanceText,
       ),
     );
   }
 
   void _startReportFlow() {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('¿Qué quieres reportar?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87)),
-                InkWell(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: Colors.grey.shade100, shape: BoxShape.circle),
-                    child: const Icon(Icons.close, size: 20, color: Colors.black54),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildModalOption(
-              icon: Icons.warning_amber_rounded,
-              title: 'Reporte urbano',
-              subtitle: 'Bache, basura, alumbrado, inseguridad...',
-              color: Colors.orange,
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const NewReportScreen()));
-              },
-            ),
-            _buildModalOption(
-              icon: Icons.recycling,
-              title: 'Publicar material reciclable',
-              subtitle: 'Plástico, cartón, vidrio para ser recogido',
-              color: Colors.green,
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const PublishMaterialScreen()));
-              },
-            ),
-            _buildModalOption(
-              icon: Icons.check_circle_outline,
-              title: 'Confirmar alertas cerca de mí',
-              subtitle: '2 reportes pendientes en tu zona',
-              color: Colors.blue,
-              badge: 2,
-              onTap: () {
-                Navigator.pop(context);
-                ref.read(currentNavIndexProvider.notifier).setIndex(1); // Notifications/Alerts
-              },
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildModalOption({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required MaterialColor color,
-    int? badge,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.shade50,
-          border: Border.all(color: color.shade200),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color.shade700, size: 30),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: TextStyle(color: color.shade900, fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 4),
-                  Text(subtitle, style: TextStyle(color: color.shade700, fontSize: 12)),
-                ],
-              ),
-            ),
-            if (badge != null)
-              Container(
-                padding: const EdgeInsets.all(6),
-                margin: const EdgeInsets.only(right: 8),
-                decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                child: Text('$badge', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-              ),
-            Icon(Icons.chevron_right, color: color.shade300),
-          ],
-        ),
-      ),
+      barrierDismissible: true,
+      builder: (context) => const ReportModalDialog(),
     );
   }
 
@@ -468,6 +354,9 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(authProvider);
+    final proximityIncidents = ref.watch(proximityNotifierProvider);
+
     final incidents = ref.watch(incidentsProvider);
     final activeIncidents = incidents.where((i) => i.status == IncidentStatus.active).toList();
 
@@ -510,19 +399,19 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
 
       switch (incident.type) {
         case IncidentType.insecurity:
-          iconColor = AppColors.secondary;
+          iconColor = AppColors.error;
           iconData = Icons.warning;
           break;
         case IncidentType.trash:
-          iconColor = AppColors.neutralTrash;
+          iconColor = AppColors.secondary;
           iconData = Icons.delete;
           break;
         case IncidentType.weeds:
-          iconColor = AppColors.warning;
+          iconColor = AppColors.tertiary;
           iconData = Icons.grass;
           break;
         case IncidentType.recycling:
-          iconColor = AppColors.ecoGreen;
+          iconColor = AppColors.primary;
           iconData = Icons.recycling;
           break;
       }
@@ -567,7 +456,12 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
       );
     }
 
+    final userName = user?.name ?? 'Carlos Mendoza';
+    final userInitials = userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : 'C';
+
     return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: const MainAppBar(title: 'Vigilo'),
       body: Stack(
         children: [
           // 1. EL MAPA FLUTTER_MAP
@@ -579,6 +473,9 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
               interactionOptions: const InteractionOptions(
                 flags: InteractiveFlag.all, // Permitir rotación completa
               ),
+              onMapReady: () {
+                _mapController.move(_currentLocation, 16.0);
+              },
               onMapEvent: (event) {
                 setState(() {
                   _mapRotation = _mapController.camera.rotation;
@@ -637,65 +534,179 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
               ),
             ),
 
-          // 3. BOTÓN DE FILTRO SUPERIOR DERECHO
+          // OVERLAYS Y ESTADOS
           if (!_isSelectingLocation)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 8,
-              right: 16,
-              child: FloatingActionButton(
-                mini: true,
-                heroTag: 'filter_btn',
-                backgroundColor: Colors.white,
-                foregroundColor: AppColors.primary,
-                elevation: 4,
-                onPressed: _openFilterBottomSheet,
-                child: const Icon(Icons.tune, size: 22),
-              ),
-            ),
-
-          // 4. BOTÓN FLOTANTE PARA ABRIR LA BARRA LATERAL (SIDEBAR)
-          if (!_isSelectingLocation)
-            Positioned(
-              left: 16,
-              top: MediaQuery.of(context).padding.top + 8,
-              child: FloatingActionButton(
-                mini: true,
-                heroTag: 'menu_sidebar_btn',
-                backgroundColor: Colors.white,
-                foregroundColor: AppColors.primary,
-                elevation: 4,
-                onPressed: () {
-                  setState(() {
-                    _isSidebarOpen = true;
-                  });
-                },
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    const Icon(Icons.menu, size: 24),
-                    if (activeIncidents.isNotEmpty)
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: AppColors.secondary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Text(
-                            '${activeIncidents.length}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 8,
-                              fontWeight: FontWeight.bold,
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: !_isFilterViewActive
+                  ? Stack(
+                      key: const ValueKey('state1'),
+                      children: [
+                        Positioned(
+                          left: 16,
+                          top: 16,
+                          child: FloatingActionButton(
+                            mini: true,
+                            heroTag: 'menu_sidebar_btn',
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black87,
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            onPressed: () {
+                              setState(() {
+                                _isSidebarOpen = true;
+                              });
+                            },
+                            child: Stack(
+                              alignment: Alignment.center,
+                              clipBehavior: Clip.none,
+                              children: [
+                                const Icon(AppIcons.menu, size: 24),
+                                if (activeIncidents.isNotEmpty)
+                                  Positioned(
+                                    right: -4,
+                                    top: -4,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: AppColors.error,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Text(
+                                        '${activeIncidents.length}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                         ),
-                      ),
-                  ],
-                ),
-              ),
+                        Positioned(
+                          right: 16,
+                          top: 16,
+                          child: FloatingActionButton(
+                            mini: true,
+                            heroTag: 'filter_btn_state1',
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black87,
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            onPressed: () {
+                              setState(() {
+                                _isFilterViewActive = true;
+                              });
+                            },
+                            child: const Icon(AppIcons.tune),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Stack(
+                      key: const ValueKey('state2'),
+                      children: [
+                        // State 2: Filter/Report View Overlays
+                        Positioned(
+                          top: 16,
+                          left: 0,
+                          right: 0,
+                          child: Column(
+                            children: [
+                              // Barra de búsqueda y botón de filtro
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        height: 52,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(12),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(0.05),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            const SizedBox(width: 16),
+                                            Icon(AppIcons.search, color: Colors.grey.shade600),
+                                            const SizedBox(width: 12),
+                                            Text(
+                                              'Buscar en el mapa...',
+                                              style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Container(
+                                      height: 52,
+                                      width: 52,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(12),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.05),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: IconButton(
+                                        icon: const Icon(AppIcons.tune, color: AppColors.primary),
+                                        onPressed: () {
+                                          setState(() {
+                                            _isFilterViewActive = false; // Volver al mapa
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              // Chips Row
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                child: Row(
+                                  children: [
+                                    _buildFilterChip('Todos', _selectedMainFilter == 'Todos', () {
+                                      setState(() {
+                                        _selectedMainFilter = 'Todos';
+                                      });
+                                    }),
+                                    const SizedBox(width: 12),
+                                    _buildFilterChip('Reportes', _selectedMainFilter == 'Reportes', () {
+                                      setState(() {
+                                        _selectedMainFilter = 'Reportes';
+                                      });
+                                    }),
+                                    const SizedBox(width: 12),
+                                    _buildFilterChip('Reciclaje', _selectedMainFilter == 'Reciclaje', () {
+                                      setState(() {
+                                        _selectedMainFilter = 'Reciclaje';
+                                      });
+                                    }),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
             ),
 
           // 5. CONTROLES FLOTANTES LATERALES DERECHOS (BRÚJULA Y MODO CAMINATA)
@@ -753,6 +764,37 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                 ],
               ),
             ),
+            
+          // Proximity Alert Overlay (Placed after controls so it renders on top)
+          if (proximityIncidents.isNotEmpty && !_isSelectingLocation)
+            Positioned(
+              bottom: 90, // Right above the REPORTAR FAB, covering the compass and walk controls
+              left: 0,
+              right: 0,
+              child: ProximityAlertOverlay(
+                key: ValueKey(proximityIncidents.first.id),
+                incident: proximityIncidents.first,
+                onDismiss: () {
+                  ref.read(proximityNotifierProvider.notifier).dismissAlert(proximityIncidents.first.id);
+                },
+                onConfirm: () {
+                  ref.read(incidentsProvider.notifier).validateIncident(proximityIncidents.first.id, user?.id ?? 'u1');
+                  ref.read(proximityNotifierProvider.notifier).permanentlyDismissAlert(proximityIncidents.first.id);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gracias por confirmar')));
+                },
+                onReject: () {
+                  ref.read(incidentsProvider.notifier).resolveIncident(
+                    incidentId: proximityIncidents.first.id, 
+                    userId: user?.id ?? 'u1', 
+                    companyId: 'none', 
+                    companyName: 'Usuario', 
+                    comment: 'El usuario indicó que ya no está.'
+                  );
+                  ref.read(proximityNotifierProvider.notifier).permanentlyDismissAlert(proximityIncidents.first.id);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gracias por el reporte')));
+                },
+              ),
+            ),
 
           // 6. OVERLAY OSCURO PARA CERRAR SIDEBAR
           if (_isSidebarOpen)
@@ -808,19 +850,23 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                 ),
               ],
             )
-          : FloatingActionButton.extended(
-              heroTag: 'start_report_btn',
-              onPressed: _startReportFlow,
-              backgroundColor: AppColors.primary,
-              icon: const Icon(Icons.add, color: Colors.white),
-              label: const Text(
-                'Reportar',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+          : ElevatedButton.icon(
+                  onPressed: _startReportFlow,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF004D25), // Dark green as seen in first image
+                    foregroundColor: Colors.white,
+                    elevation: 4,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  icon: const Icon(AppIcons.addLocationAlt, color: Colors.white),
+                  label: const Text(
+                    'REPORTAR',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1.2),
+                  ),
                 ),
-              ),
-            ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }

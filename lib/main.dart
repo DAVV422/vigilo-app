@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'screens/splash_screen.dart';
+import 'presentation/screens/splash/splash_screen.dart';
 import 'theme/app_colors.dart';
 
 void main() {
