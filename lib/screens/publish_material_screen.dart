@@ -137,33 +137,33 @@ class _PublishMaterialScreenState extends ConsumerState<PublishMaterialScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       appBar: const CustomAppBar(
         title: 'Publicar material',
         subtitle: 'Conecta con recolectores locales',
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(18.0),
         physics: const BouncingScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Aviso de ubicación
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                border: Border.all(color: Colors.blue.shade200),
-                borderRadius: BorderRadius.circular(12),
+                color: Colors.blue.shade50.withOpacity(0.6),
+                border: Border.all(color: Colors.blue.shade100, width: 1),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.my_location, color: Colors.blue.shade700),
+                  Icon(Icons.my_location_rounded, color: Colors.blue.shade600, size: 22),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Los recolectores verán esta alerta en tu ubicación exacta actual.',
-                      style: TextStyle(color: Colors.blue, fontSize: 13, fontWeight: FontWeight.w500),
+                      style: TextStyle(color: Colors.blue.shade800, fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -171,7 +171,10 @@ class _PublishMaterialScreenState extends ConsumerState<PublishMaterialScreen> {
             ),
             const SizedBox(height: 24),
 
-            const Text('Tipo de material *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text(
+              'Tipo de material *',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.onBackground),
+            ),
             const SizedBox(height: 12),
             GridView.builder(
               shrinkWrap: true,
@@ -188,18 +191,40 @@ class _PublishMaterialScreenState extends ConsumerState<PublishMaterialScreen> {
                 final mat = _materials[index];
                 return InkWell(
                   onTap: () => setState(() => _selectedCategoryIndex = index),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
+                  borderRadius: BorderRadius.circular(16),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
                     decoration: BoxDecoration(
-                      color: isSelected ? Colors.green.shade50 : Colors.white,
-                      border: Border.all(color: isSelected ? Colors.green : Colors.grey.shade300, width: isSelected ? 2 : 1),
-                      borderRadius: BorderRadius.circular(12),
+                      color: isSelected ? AppColors.primary.withOpacity(0.06) : Colors.white,
+                      border: Border.all(
+                        color: isSelected ? AppColors.primary : Colors.grey.shade200,
+                        width: isSelected ? 2.0 : 1.0,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: isSelected ? AppColors.primary.withOpacity(0.04) : Colors.black.withOpacity(0.015),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     child: Row(
                       children: [
-                        Icon(mat['icon'] as IconData, size: 24, color: isSelected ? Colors.green : Colors.grey.shade600),
-                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.grey.shade50,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            mat['icon'] as IconData,
+                            size: 20,
+                            color: isSelected ? AppColors.primary : Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,16 +235,18 @@ class _PublishMaterialScreenState extends ConsumerState<PublishMaterialScreen> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  color: isSelected ? Colors.green.shade800 : Colors.black87,
+                                  color: isSelected ? AppColors.primary : Colors.black87,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
+                              const SizedBox(height: 2),
                               Text(
                                 mat['price'] as String,
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color: isSelected ? Colors.green.shade700 : Colors.grey.shade500,
+                                  color: isSelected ? AppColors.primary.withOpacity(0.8) : Colors.grey.shade500,
+                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                                 ),
                               ),
                             ],
@@ -235,13 +262,16 @@ class _PublishMaterialScreenState extends ConsumerState<PublishMaterialScreen> {
 
             _buildLabel('Descripción de cantidad *'),
             _buildTextField(controller: _descController, hint: 'Ej: 3 bolsas grandes, 8 cajas...'),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
             _buildLabel('Kg estimados (aproximado)'),
             _buildTextField(controller: _kgController, hint: 'Ej: 5', keyboardType: TextInputType.number),
             const SizedBox(height: 24),
 
-            const Text('Horario disponible para recoger *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text(
+              'Horario disponible para recoger *',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.onBackground),
+            ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -257,39 +287,52 @@ class _PublishMaterialScreenState extends ConsumerState<PublishMaterialScreen> {
                     });
                   },
                   backgroundColor: Colors.white,
-                  selectedColor: Colors.green.shade100,
+                  selectedColor: AppColors.primary.withOpacity(0.08),
                   labelStyle: TextStyle(
-                    color: isSelected ? Colors.green.shade800 : Colors.black87,
+                    color: isSelected ? AppColors.primary : Colors.black87,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 13,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    side: BorderSide(color: isSelected ? Colors.green : Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: isSelected ? AppColors.primary : Colors.grey.shade200,
+                      width: isSelected ? 1.5 : 1.0,
+                    ),
                   ),
                 );
               }).toList(),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             _buildTextField(controller: _extraController, hint: 'O escribe un horario específico...'),
             const SizedBox(height: 24),
 
             _buildLabel('Descripción adicional'),
             _buildTextField(hint: 'Ej: Material limpio y seco, separado por tipo...', maxLines: 3),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
 
             // Info Card
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade300),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('¿Qué pasa después?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
-                  const SizedBox(height: 16),
+                  const Text(
+                    '¿Qué pasa después?',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.onBackground),
+                  ),
+                  const SizedBox(height: 18),
                   _buildProcessStep('1', 'Tu alerta aparece en el mapa para los recolectores.'),
                   _buildProcessStep('2', 'Un recolector acepta "Yo lo recojo".'),
                   _buildProcessStep('3', 'El recolector pasa por tu ubicación indicada.'),
@@ -297,20 +340,24 @@ class _PublishMaterialScreenState extends ConsumerState<PublishMaterialScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 36),
 
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey.shade200,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black87,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: Colors.grey.shade200),
+                      ),
                       elevation: 0,
                     ),
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+                    child: const Text('Cancelar', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -318,16 +365,19 @@ class _PublishMaterialScreenState extends ConsumerState<PublishMaterialScreen> {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 2,
+                      shadowColor: AppColors.primary.withOpacity(0.3),
                     ),
                     onPressed: _submitPublish,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: const [
-                        Icon(Icons.inventory_2, color: Colors.white, size: 18),
+                        Icon(Icons.inventory_2_outlined, color: Colors.white, size: 20),
                         SizedBox(width: 8),
-                        Text('Publicar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        Text('Publicar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       ],
                     ),
                   ),
@@ -344,7 +394,10 @@ class _PublishMaterialScreenState extends ConsumerState<PublishMaterialScreen> {
   Widget _buildLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
-      child: Text(text, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+      child: Text(
+        text,
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.onBackground),
+      ),
     );
   }
 
@@ -357,15 +410,20 @@ class _PublishMaterialScreenState extends ConsumerState<PublishMaterialScreen> {
         hintText: hint,
         hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
         filled: true,
-        fillColor: Colors.grey.shade50,
+        fillColor: Colors.white,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade200),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade200),
         ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
     );
   }
@@ -374,9 +432,9 @@ class _PublishMaterialScreenState extends ConsumerState<PublishMaterialScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
@@ -406,16 +464,22 @@ class _PublishMaterialScreenState extends ConsumerState<PublishMaterialScreen> {
             width: 24,
             height: 24,
             decoration: BoxDecoration(
-              color: Colors.green.shade100,
+              color: AppColors.primary.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Center(
-              child: Text(number, style: TextStyle(color: Colors.green.shade800, fontWeight: FontWeight.bold, fontSize: 12)),
+              child: Text(
+                number,
+                style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12),
+              ),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(text, style: TextStyle(color: Colors.grey.shade700, fontSize: 13, height: 1.4)),
+            child: Text(
+              text,
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 13, height: 1.4),
+            ),
           ),
         ],
       ),

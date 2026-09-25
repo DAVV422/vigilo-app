@@ -221,25 +221,40 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           if (user != null)
             Container(
               width: double.infinity,
-              margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              margin: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [AppColors.primary, AppColors.ecoGreen],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.2),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.monetization_on, color: Colors.white, size: 28),
-                  const SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.18),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.monetization_on, color: Colors.white, size: 28),
+                  ),
+                  const SizedBox(width: 14),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Tus Puntos', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                      Text('${user.points} pts', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                      const Text('Tus Puntos Acumulados', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 2),
+                      Text('${user.points} pts', style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                     ],
                   ),
                 ],
@@ -247,30 +262,46 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Buscar productos, cupones...',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value.toLowerCase();
-                });
-              },
+              child: TextField(
+                controller: _searchController,
+                style: const TextStyle(fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Buscar productos, cupones...',
+                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  prefixIcon: Icon(Icons.search_rounded, color: Colors.grey.shade400, size: 22),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value.toLowerCase();
+                  });
+                },
+              ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            physics: const BouncingScrollPhysics(),
             child: Row(
               children: ['Todos', 'Vehículos', 'Mascotas', 'Hogar', 'Ecológico', 'Accesorios', 'Cupones']
                   .map((category) {
@@ -283,12 +314,24 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                             _selectedCategory = category;
                           });
                         },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           decoration: BoxDecoration(
                             color: isSelected ? AppColors.primary : Colors.white,
-                            borderRadius: BorderRadius.circular(30.0),
-                            border: isSelected ? null : Border.all(color: Colors.grey.shade300, width: 1),
+                            borderRadius: BorderRadius.circular(16.0),
+                            border: Border.all(
+                              color: isSelected ? AppColors.primary : Colors.grey.shade200,
+                              width: 1,
+                            ),
+                            boxShadow: [
+                              if (isSelected)
+                                BoxShadow(
+                                  color: AppColors.primary.withOpacity(0.15),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                            ],
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -296,14 +339,15 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                               Icon(
                                 _getCategoryIcon(category),
                                 size: 16,
-                                color: isSelected ? Colors.white : Colors.grey.shade700,
+                                color: isSelected ? Colors.white : Colors.grey.shade600,
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 8),
                               Text(
                                 category,
                                 style: TextStyle(
                                   color: isSelected ? Colors.white : Colors.grey.shade800,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                  fontSize: 13,
                                 ),
                               ),
                             ],
@@ -315,7 +359,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                   .toList(),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Expanded(
             child: productsAsync.when(
               data: (allProducts) {
@@ -332,7 +376,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                       children: [
                         Icon(Icons.storefront_outlined, size: 64, color: Colors.grey[300]),
                         const SizedBox(height: 16),
-                        Text('No hay productos disponibles', style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+                        Text('No hay productos disponibles', style: TextStyle(color: Colors.grey[600], fontSize: 16, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 8),
                         Text('Pronto tendremos novedades', style: TextStyle(color: Colors.grey[400], fontSize: 13)),
                       ],
@@ -345,8 +389,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     crossAxisSpacing: 12,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 0.58,
+                    mainAxisSpacing: 14,
+                    childAspectRatio: 0.56,
                   ),
                   itemCount: products.length,
                   itemBuilder: (context, index) {
@@ -356,17 +400,18 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                     return Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey.shade100),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
+                            color: Colors.black.withOpacity(0.025),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(20),
                         child: Material(
                           color: Colors.transparent,
                           child: InkWell(
@@ -377,7 +422,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text('Necesitas ${product.pointsCost} pts. Te faltan ${product.pointsCost - (user?.points ?? 0)} pts.'),
-                                    backgroundColor: Colors.grey,
+                                    backgroundColor: AppColors.secondary,
+                                    behavior: SnackBarBehavior.floating,
                                   ),
                                 );
                               }
@@ -387,18 +433,16 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                               children: [
                                 // A. Bloque Superior (Área de Imagen)
                                 Container(
-                                  height: 110,
+                                  height: 115,
                                   width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.shade50,
-                                  ),
+                                  color: AppColors.background,
                                   child: Center(
                                     child: Image.network(
                                       product.imageUrl,
-                                      width: 70,
-                                      height: 70,
+                                      width: 72,
+                                      height: 72,
                                       fit: BoxFit.contain,
-                                      errorBuilder: (_, __, ___) => const Icon(Icons.card_giftcard, color: AppColors.primary, size: 40),
+                                      errorBuilder: (_, __, ___) => const Icon(Icons.card_giftcard, color: AppColors.primary, size: 36),
                                     ),
                                   ),
                                 ),
@@ -411,20 +455,20 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                                       children: [
                                         // Etiqueta de Categoría
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                           decoration: BoxDecoration(
-                                            color: Colors.orange.shade100,
-                                            borderRadius: BorderRadius.circular(20),
+                                            color: AppColors.primary.withOpacity(0.06),
+                                            borderRadius: BorderRadius.circular(8),
                                           ),
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Icon(_getCategoryIcon(product.category), size: 10, color: Colors.orange.shade800),
+                                              Icon(_getCategoryIcon(product.category), size: 10, color: AppColors.primary),
                                               const SizedBox(width: 4),
                                               Text(
                                                 product.category,
-                                                style: TextStyle(
-                                                  color: Colors.orange.shade800,
+                                                style: const TextStyle(
+                                                  color: AppColors.primary,
                                                   fontSize: 9,
                                                   fontWeight: FontWeight.bold,
                                                 ),
@@ -432,7 +476,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                                             ],
                                           ),
                                         ),
-                                        const SizedBox(height: 6),
+                                        const SizedBox(height: 8),
                                         // Título del Producto
                                         Text(
                                           product.name,
@@ -440,6 +484,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                                             color: Colors.black87,
                                             fontWeight: FontWeight.bold,
                                             fontSize: 13,
+                                            height: 1.2,
                                           ),
                                           maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
@@ -449,16 +494,16 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                                         Text(
                                           product.description,
                                           style: TextStyle(
-                                            color: Colors.grey.shade600,
+                                            color: Colors.grey.shade500,
                                             fontSize: 11,
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
-                                        const SizedBox(height: 4),
+                                        const SizedBox(height: 2),
                                         // Proveedor
                                         Text(
-                                          'Por: Supermercado Hipermaxi',
+                                          'Por: Aliado Vigilo',
                                           style: TextStyle(
                                             color: Colors.grey.shade400,
                                             fontSize: 10,
@@ -480,14 +525,14 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                                                 Row(
                                                   crossAxisAlignment: CrossAxisAlignment.center,
                                                   children: [
-                                                    const Icon(Icons.star, color: Colors.amber, size: 14),
-                                                    const SizedBox(width: 2),
+                                                    const Icon(Icons.stars_rounded, color: Colors.amber, size: 16),
+                                                    const SizedBox(width: 3),
                                                     Text(
                                                       '${product.pointsCost}',
                                                       style: TextStyle(
                                                         fontWeight: FontWeight.bold,
-                                                        fontSize: 16,
-                                                        color: canAfford ? Colors.black87 : Colors.grey,
+                                                        fontSize: 15,
+                                                        color: canAfford ? AppColors.primary : Colors.grey,
                                                       ),
                                                     ),
                                                     const SizedBox(width: 2),
@@ -500,6 +545,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                                                     ),
                                                   ],
                                                 ),
+                                                const SizedBox(height: 2),
                                                 Text(
                                                   'Stock: ${product.stock}',
                                                   style: TextStyle(
@@ -511,8 +557,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                                             ),
                                             // Lado Derecho (Botón de Acción)
                                             SizedBox(
-                                              height: 28,
-                                              child: ElevatedButton.icon(
+                                              height: 30,
+                                              child: ElevatedButton(
                                                 onPressed: () {
                                                   if (canAfford) {
                                                     _confirmRedeem(context, ref, product);
@@ -520,24 +566,31 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                                                     ScaffoldMessenger.of(context).showSnackBar(
                                                       SnackBar(
                                                         content: Text('Necesitas ${product.pointsCost} pts.'),
-                                                        backgroundColor: Colors.grey,
+                                                        backgroundColor: AppColors.secondary,
+                                                        behavior: SnackBarBehavior.floating,
                                                       ),
                                                     );
                                                   }
                                                 },
                                                 style: ElevatedButton.styleFrom(
-                                                  backgroundColor: canAfford ? AppColors.primary : Colors.grey.shade300,
-                                                  foregroundColor: Colors.white,
-                                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                                  backgroundColor: canAfford ? AppColors.primary : Colors.grey.shade100,
+                                                  foregroundColor: canAfford ? Colors.white : Colors.grey.shade400,
+                                                  padding: const EdgeInsets.symmetric(horizontal: 10),
                                                   elevation: 0,
                                                   shape: RoundedRectangleBorder(
-                                                    borderRadius: BorderRadius.circular(8),
+                                                    borderRadius: BorderRadius.circular(10),
                                                   ),
                                                 ),
-                                                icon: const Icon(Icons.redeem, size: 12),
-                                                label: const Text(
-                                                  'Canjear',
-                                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: const [
+                                                    Icon(Icons.redeem_rounded, size: 12),
+                                                    SizedBox(width: 4),
+                                                    Text(
+                                                      'Canjear',
+                                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
                                             ),
