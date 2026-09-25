@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../theme/app_colors.dart';
-import 'login_screen.dart';
-import 'main_wrapper_screen.dart';
+import '../../../theme/app_colors.dart';
+import '../../../screens/login_screen.dart';
+import '../dashboard/dashboard_screen.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -20,10 +20,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   _checkSession() async {
-    // Simulamos un pequeño delay de carga corporativo
-    await Future.delayed(const Duration(seconds: 2));
+    // Retraso de 2.5 segundos como requiere UT-601
+    await Future.delayed(const Duration(milliseconds: 2500));
     
-    // Verificamos si existe sesión guardada
     final prefs = await SharedPreferences.getInstance();
     final hasSession = prefs.getString('userEmail') != null;
 
@@ -31,7 +30,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       if (hasSession) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const MainWrapperScreen()),
+          MaterialPageRoute(builder: (context) => const DashboardScreen()),
         );
       } else {
         Navigator.pushReplacement(
@@ -50,17 +49,33 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.shield, size: 100, color: Colors.white),
+            Spacer(),
+            Icon(Icons.shield, size: 100, color: AppColors.onPrimary),
             SizedBox(height: 16),
             Text(
               'VIGILO',
               style: TextStyle(
-                color: Colors.white,
-                fontSize: 32,
+                color: AppColors.onPrimary,
+                fontSize: 40,
                 fontWeight: FontWeight.bold,
-                letterSpacing: 2,
+                fontFamily: 'Hanken Grotesk',
               ),
             ),
+            SizedBox(height: 4),
+            Text(
+              'URBAN SAFETY',
+              style: TextStyle(
+                color: AppColors.onPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 4.0,
+              ),
+            ),
+            Spacer(),
+            CircularProgressIndicator(
+              color: AppColors.onPrimary,
+            ),
+            SizedBox(height: 64),
           ],
         ),
       ),

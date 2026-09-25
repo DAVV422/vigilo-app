@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vigilo/domain/entities/incident.dart';
 import '../theme/app_colors.dart';
-import 'home_map_screen.dart';
-import 'alerts_screen.dart';
+import '../presentation/screens/map/home_map_screen.dart';
+import '../presentation/screens/alerts/alerts_screen.dart';
 import 'profile_screen.dart';
 import 'store_screen.dart';
-import '../widgets/proximity_alert_dialog.dart';
 import '../presentation/providers/providers.dart';
 
 class MainWrapperScreen extends ConsumerStatefulWidget {
@@ -59,30 +58,13 @@ class _MainWrapperScreenState extends ConsumerState<MainWrapperScreen> {
       body: Stack(
         children: [
           currentScreen,
-          if (proximityIncidents.isNotEmpty)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 16.0,
-              child: SafeArea(
-                child: ProximityAlertDialog(
-                  incident: proximityIncidents.first,
-                  onDismiss: (permanently) {
-                    if (permanently) {
-                      ref.read(proximityNotifierProvider.notifier).permanentlyDismissAlert(proximityIncidents.first.id);
-                    } else {
-                      ref.read(proximityNotifierProvider.notifier).dismissAlert(proximityIncidents.first.id);
-                    }
-                  },
-                ),
-              ),
-            ),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: currentIndex,
         selectedItemColor: AppColors.primary,
         unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
         onTap: (index) {
           ref.read(currentNavIndexProvider.notifier).setIndex(index);
           if (index != 0) {
