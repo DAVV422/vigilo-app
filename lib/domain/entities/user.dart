@@ -1,4 +1,6 @@
-enum UserRole { normal, security, cleaning, recycling }
+// admin/companySupervisor/companyManager/moderator no tienen UI propia todavía
+// pero se agregan para que mapear los roles reales del backend nunca falle.
+enum UserRole { normal, security, cleaning, recycling, admin, companySupervisor, companyManager, moderator }
 enum CompanyRole { employee, manager, director }
 
 class User {
@@ -14,12 +16,20 @@ class User {
   final List<UserRole> roles;
   final String? companyId;
   final CompanyRole? companyRole;
+  // Campos que solo provee el backend real (ver RemoteUserMapper). Quedan
+  // con defaults inofensivos para los usuarios que siguen viniendo del mock
+  // local, que nunca los tuvo.
+  final double trustScore;
+  final int ratingsCount;
 
   User({
     required this.id,
     required this.name,
     required this.email,
-    required this.password,
+    // El backend real nunca devuelve la contraseña — el mock local sí la
+    // guardaba en texto plano para comparar en `login()`. Queda opcional
+    // para que un User mapeado desde la API no necesite inventar una.
+    this.password = '',
     this.avatarUrl = '',
     this.username = '',
     this.lastName = '',
@@ -28,6 +38,8 @@ class User {
     this.roles = const [UserRole.normal],
     this.companyId,
     this.companyRole,
+    this.trustScore = 5.0,
+    this.ratingsCount = 0,
   });
 
   String get level {
@@ -67,6 +79,8 @@ class User {
     List<UserRole>? roles,
     String? companyId,
     CompanyRole? companyRole,
+    double? trustScore,
+    int? ratingsCount,
   }) {
     return User(
       id: id ?? this.id,
@@ -81,6 +95,8 @@ class User {
       roles: roles ?? this.roles,
       companyId: companyId ?? this.companyId,
       companyRole: companyRole ?? this.companyRole,
+      trustScore: trustScore ?? this.trustScore,
+      ratingsCount: ratingsCount ?? this.ratingsCount,
     );
   }
 }
