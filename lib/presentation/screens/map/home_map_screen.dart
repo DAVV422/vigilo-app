@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../domain/entities/incident.dart';
 import '../../../domain/entities/user.dart';
+import '../../../domain/repositories/incident_repository.dart' show IncidentVote;
 import '../../providers/providers.dart';
 import '../../../theme/app_colors.dart';
 import '../../../widgets/widgets.dart';
@@ -801,18 +802,24 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                   ref.read(proximityNotifierProvider.notifier).dismissAlert(proximityIncidents.first.id);
                 },
                 onConfirm: () {
-                  ref.read(incidentsProvider.notifier).validateIncident(proximityIncidents.first.id, user?.id ?? 'u1');
+                  ref.read(incidentsProvider.notifier).validateIncident(
+                        proximityIncidents.first.id,
+                        user?.id ?? 'u1',
+                        vote: IncidentVote.stillPresent,
+                      );
                   ref.read(proximityNotifierProvider.notifier).permanentlyDismissAlert(proximityIncidents.first.id);
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gracias por confirmar')));
                 },
                 onReject: () {
-                  ref.read(incidentsProvider.notifier).resolveIncident(
-                    incidentId: proximityIncidents.first.id, 
-                    userId: user?.id ?? 'u1', 
-                    companyId: 'none', 
-                    companyName: 'Usuario', 
-                    comment: 'El usuario indicó que ya no está.'
-                  );
+                  // Un ciudadano no puede "resolver" un incidente contra el
+                  // backend real (solo guardias/empresas/admin pueden) — lo
+                  // correcto aquí es votar que el reporte ya no refleja la
+                  // realidad, no intentar cerrarlo.
+                  ref.read(incidentsProvider.notifier).validateIncident(
+                        proximityIncidents.first.id,
+                        user?.id ?? 'u1',
+                        vote: IncidentVote.falseReport,
+                      );
                   ref.read(proximityNotifierProvider.notifier).permanentlyDismissAlert(proximityIncidents.first.id);
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gracias por el reporte')));
                 },
