@@ -23,6 +23,16 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
   LatLng? _selectedLocation;
   String _locationText = 'Av. Insurgentes Sur 123'; // Default to match image
   List<XFile> _selectedImages = [];
+  IncidentType? _selectedType;
+
+  static const List<(IncidentType, String, IconData)> _reportTypes = [
+    (IncidentType.insecurity, 'Inseguridad', Icons.warning_amber_rounded),
+    (IncidentType.trash, 'Basura', Icons.delete_outline),
+    (IncidentType.weeds, 'Maleza', Icons.grass),
+    (IncidentType.streetLight, 'Alumbrado', Icons.lightbulb_outline),
+    (IncidentType.pothole, 'Bache', Icons.warning_rounded),
+    (IncidentType.other, 'Otro', Icons.report_outlined),
+  ];
 
   Future<void> _pickImages() async {
     final picker = ImagePicker();
@@ -103,7 +113,7 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
   }
 
   Future<void> _submitReport() async {
-    if (_titleController.text.isEmpty || _descriptionController.text.isEmpty) {
+    if (_titleController.text.isEmpty || _descriptionController.text.isEmpty || _selectedType == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Por favor, completa los campos obligatorios (*)'), backgroundColor: AppColors.error),
       );
@@ -124,7 +134,7 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
         title: _titleController.text,
         description: _descriptionController.text,
         location: _selectedLocation ?? const LatLng(-17.7833, -63.1821),
-        type: IncidentType.weeds, // Or whatever maps to Urbano
+        type: _selectedType!,
         reportedAt: DateTime.now(),
         reportedByUserId: user?.id ?? 'user1',
         validatorsIds: [],
@@ -290,6 +300,51 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
                     ),
             ),
             const SizedBox(height: 24),
+
+            // Selector de tipo de incidencia
+            _buildLabel('TIPO DE REPORTE *'),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _reportTypes.map((entry) {
+                final (type, label, icon) = entry;
+                final isSelected = _selectedType == type;
+                return InkWell(
+                  onTap: () => setState(() => _selectedType = type),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.primary : AppColors.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isSelected ? AppColors.primary : AppColors.surfaceContainerHigh,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          icon,
+                          size: 16,
+                          color: isSelected ? AppColors.onPrimary : AppColors.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected ? AppColors.onPrimary : AppColors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
 
             // Inputs
             _buildLabel('TÍTULO DEL REPORTE *'),
