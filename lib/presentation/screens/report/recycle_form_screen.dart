@@ -1,13 +1,20 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide MaterialType;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/network/api_exception.dart';
 import '../../../theme/app_colors.dart';
-import '../../../domain/entities/incident.dart';
+import '../../../domain/entities/material_type.dart';
+import '../../../domain/entities/recycling_listing.dart';
+import '../../../domain/repositories/recycling_repository.dart';
 import '../../providers/providers.dart';
 
+/// Publica una [RecyclingListing] real contra el backend. Reemplaza la
+/// versión anterior, que construía un `Incident` genérico de tipo
+/// `recycling` — el reciclaje ya no vive ahí (ver docs/decisiones.md #005):
+/// es su propio recurso, con catálogo de materiales real, peso en gramos y
+/// ventanas de disponibilidad por día de la semana.
 class RecycleFormScreen extends ConsumerStatefulWidget {
   const RecycleFormScreen({super.key});
 
@@ -15,50 +22,87 @@ class RecycleFormScreen extends ConsumerStatefulWidget {
   ConsumerState<RecycleFormScreen> createState() => _RecycleFormScreenState();
 }
 
-class _RecycleFormScreenState extends ConsumerState<RecycleFormScreen> {
-  final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _quantityController = TextEditingController();
-  List<XFile> _selectedImages = [];
+class _WeekDay {
+  final int index; // 0=domingo .. 6=sábado, como lo espera el backend
+  final String label;
+  const _WeekDay(this.index, this.label);
+}
 
-  Future<void> _pickImages() async {
-    final picker = ImagePicker();
-    final pickedFiles = await picker.pickMultiImage();
-    if (pickedFiles.isNotEmpty) {
+class _TimeSlot {
+  final String label;
+  final IconData icon;
+  final String start;
+  final String end;
+  const _TimeSlot(this.label, this.icon, this.start, this.end);
+}
+
+class _RecycleFormScreenState extends ConsumerState<RecycleFormScreen> {
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _weightController = TextEditingController();
+  XFile? _selectedImage;
+  bool _isSubmitting = false;
+
+  List<MaterialType> _materials = [];
+  bool _loadingMaterials = true;
+  String? _materialsError;
+  MaterialType? _selectedMaterial;
+
+  static const _weekDays = [
+    _WeekDay(1, 'Lun'),
+    _WeekDay(2, 'Mar'),
+    _WeekDay(3, 'Mié'),
+    _WeekDay(4, 'Jue'),
+    _WeekDay(5, 'Vie'),
+    _WeekDay(6, 'Sáb'),
+    _WeekDay(0, 'Dom'),
+  ];
+  int _selectedDay = DateTime.now().weekday % 7;
+
+  static const _timeSlots = [
+    _TimeSlot('Mañana', Icons.light_mode_outlined, '07:00:00', '12:00:00'),
+    _TimeSlot('Tarde', Icons.wb_twilight_outlined, '12:00:00', '18:00:00'),
+    _TimeSlot('Noche', Icons.dark_mode_outlined, '18:00:00', '21:00:00'),
+  ];
+  _TimeSlot _selectedSlot = _timeSlots.first;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMaterials();
+  }
+
+  Future<void> _loadMaterials() async {
+    try {
+      final materials = await ref.read(recyclingRepositoryProvider).getMaterials();
+      if (!mounted) return;
       setState(() {
-        _selectedImages.addAll(pickedFiles);
-        if (_selectedImages.length > 5) {
-          _selectedImages = _selectedImages.sublist(0, 5);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Puedes subir hasta 5 fotos como máximo.')),
-          );
-        }
+        _materials = materials;
+        _selectedMaterial = materials.isNotEmpty ? materials.first : null;
+        _loadingMaterials = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _materialsError = e is ApiException
+            ? e.message
+            : 'No se pudo cargar el catálogo de materiales.';
+        _loadingMaterials = false;
       });
     }
   }
 
-  String _selectedMaterial = 'Plástico';
-  String _selectedUnit = 'Bolsas';
-  String _selectedTimeSlot = 'Mañana';
-
-  final List<Map<String, dynamic>> _materials = const [
-    {'name': 'Plástico', 'icon': Icons.recycling},
-    {'name': 'Cartón', 'icon': Icons.inventory_2_outlined},
-    {'name': 'Vidrio', 'icon': Icons.local_drink_outlined},
-    {'name': 'Metal', 'icon': Icons.hardware_outlined},
-  ];
-
-  final List<String> _units = const ['Bolsas', 'Kg', 'Cajas'];
-
-  final List<Map<String, dynamic>> _timeSlots = const [
-    {'name': 'Mañana', 'icon': Icons.light_mode_outlined},
-    {'name': 'Tarde', 'icon': Icons.wb_twilight_outlined},
-    {'name': 'Noche', 'icon': Icons.dark_mode_outlined},
-  ];
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    if (picked != null) setState(() => _selectedImage = picked);
+  }
 
   @override
   void dispose() {
-    _descriptionController.dispose();
-    _quantityController.dispose();
+    _addressController.dispose();
+    _notesController.dispose();
+    _weightController.dispose();
     super.dispose();
   }
 
@@ -67,35 +111,31 @@ class _RecycleFormScreenState extends ConsumerState<RecycleFormScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surfaceContainerLowest,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(height: 16),
-            const Icon(Icons.check_circle, color: AppColors.primary, size: 64),
+            const SizedBox(height: 8),
+            const Icon(Icons.check_circle, color: AppColors.primary, size: 56),
             const SizedBox(height: 16),
             const Text(
-              '¡Publicado con éxito!',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+              'Publicación creada',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.onSurface),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Un reciclador cercano podrá verla y coordinar el recojo contigo.',
+              style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                onPressed: () {
-                  Navigator.popUntil(context, (route) => route.isFirst);
-                },
-                child: const Text('Volver al inicio', style: TextStyle(color: AppColors.onPrimary, fontWeight: FontWeight.bold)),
+                onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
+                child: const Text('Volver al inicio'),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -103,452 +143,327 @@ class _RecycleFormScreenState extends ConsumerState<RecycleFormScreen> {
   }
 
   Future<void> _submitForm() async {
-    if (_descriptionController.text.isEmpty || _quantityController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, completa los campos'), backgroundColor: AppColors.error),
-      );
+    if (_addressController.text.trim().isEmpty) {
+      _showError('Indica la dirección del punto de recojo.');
       return;
     }
-    
-    try {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-      );
+    final weightKg = double.tryParse(_weightController.text.replaceAll(',', '.'));
+    if (weightKg == null || weightKg <= 0) {
+      _showError('Ingresa un peso estimado válido en kilogramos.');
+      return;
+    }
+    if (_selectedMaterial == null) {
+      _showError('Selecciona un tipo de material.');
+      return;
+    }
 
-      final user = ref.read(authProvider);
-      
-      LatLng finalLocation = const LatLng(-17.7833, -63.1821);
+    setState(() => _isSubmitting = true);
+    try {
+      double latitude = -17.7833;
+      double longitude = -63.1821;
       try {
         final position = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high)
+          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
         );
-        finalLocation = LatLng(position.latitude, position.longitude);
-      } catch (e) {
-        // Ignore fallback
+        latitude = position.latitude;
+        longitude = position.longitude;
+      } catch (_) {
+        // Sin permiso de ubicación: se publica con el centro por defecto.
       }
 
-      final newIncident = Incident(
-        id: 'rec_${DateTime.now().millisecondsSinceEpoch}',
-        title: 'Reciclaje: $_selectedMaterial (${_quantityController.text} $_selectedUnit)',
-        description: _descriptionController.text,
-        location: finalLocation,
-        type: IncidentType.recycling,
-        reportedAt: DateTime.now(),
-        reportedByUserId: user?.id ?? 'user1',
-        validatorsIds: [],
-        status: IncidentStatus.active,
+      String? photoMediaId;
+      if (_selectedImage != null) {
+        final uploaded = await ref
+            .read(mediaRepositoryProvider)
+            .uploadImage(_selectedImage!.path, folder: 'listings');
+        photoMediaId = uploaded.id;
+      }
+
+      await ref.read(recyclingRepositoryProvider).createListing(
+        address: _addressController.text.trim(),
+        latitude: latitude,
+        longitude: longitude,
+        notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+        photoMediaId: photoMediaId,
+        materials: [
+          MaterialWeightInput(
+            materialTypeId: _selectedMaterial!.id,
+            estimatedWeightGrams: weightKg * 1000,
+          ),
+        ],
+        availabilityWindows: [
+          RecyclingAvailabilityWindow(
+            dayOfWeek: _selectedDay,
+            startTime: _selectedSlot.start,
+            endTime: _selectedSlot.end,
+          ),
+        ],
       );
 
-      await ref.read(incidentsProvider.notifier).addIncident(newIncident);
-      
-      if (mounted) Navigator.pop(context);
-      _showSuccessDialog();
+      if (mounted) _showSuccessDialog();
     } catch (e) {
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: AppColors.error),
-        );
-      }
+      final message = e is ApiException
+          ? e.message
+          : 'No se pudo publicar. Revisa tu conexión e intenta de nuevo.';
+      _showError(message);
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: AppColors.error),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: const BoxDecoration(
-              color: AppColors.surfaceContainerLow,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.arrow_back, color: AppColors.onSurface, size: 20),
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Publicar Reciclaje',
-          style: TextStyle(
-            color: AppColors.onSurface,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        physics: const BouncingScrollPhysics(),
+      appBar: AppBar(title: const Text('Publicar material reciclable')),
+      body: _loadingMaterials
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          : _materialsError != null
+              ? _buildError(_materialsError!)
+              : _buildForm(),
+    );
+  }
+
+  Widget _buildError(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // EVIDENCIA
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 32),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.surfaceContainerHigh),
-              ),
-              child: _selectedImages.isEmpty
-                  ? Column(
-                      children: [
-                        InkWell(
-                          onTap: _pickImages,
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: const Icon(
-                              Icons.add_a_photo_outlined,
-                              color: AppColors.onPrimary,
-                              size: 32,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Subir Foto/Video',
-                          style: TextStyle(
-                            color: AppColors.onSurface,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Sube evidencia del material (Máx 5)',
-                          style: TextStyle(
-                            color: AppColors.onSurfaceVariant,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    )
-                  : Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        children: [
-                          ..._selectedImages.map((file) => Stack(
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: Image.file(
-                                      File(file.path),
-                                      width: 80,
-                                      height: 80,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: 4,
-                                    right: 4,
-                                    child: InkWell(
-                                      onTap: () {
-                                        setState(() {
-                                          _selectedImages.remove(file);
-                                        });
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: const BoxDecoration(
-                                          color: Colors.black54,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(Icons.close, color: Colors.white, size: 16),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )),
-                          if (_selectedImages.length < 5)
-                            InkWell(
-                              onTap: _pickImages,
-                              borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                width: 80,
-                                height: 80,
-                                decoration: BoxDecoration(
-                                  color: AppColors.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: AppColors.outlineVariant),
-                                ),
-                                child: const Icon(Icons.add, color: AppColors.onSurfaceVariant, size: 32),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-            ),
-            const SizedBox(height: 24),
-
-            // DESCRIPCIÓN
-            _buildLabel('Descripción'),
-            _buildTextField(
-              controller: _descriptionController,
-              hint: 'Describe los materiales, estado, y detalles\nadicionales...',
-              maxLines: 3,
-            ),
-            const SizedBox(height: 20),
-
-            // TIPO DE MATERIAL
-            _buildLabel('Tipo de Material'),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 3.5,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-              ),
-              itemCount: _materials.length,
-              itemBuilder: (context, index) {
-                final material = _materials[index];
-                final isSelected = _selectedMaterial == material['name'];
-                return InkWell(
-                  onTap: () {
-                    setState(() {
-                      _selectedMaterial = material['name'];
-                    });
-                  },
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isSelected ? AppColors.primary : AppColors.surfaceContainerLowest,
-                      border: Border.all(
-                        color: isSelected ? AppColors.primary : AppColors.surfaceContainerHighest,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          material['icon'],
-                          color: isSelected ? AppColors.onPrimary : AppColors.onSurfaceVariant,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          material['name'],
-                          style: TextStyle(
-                            color: isSelected ? AppColors.onPrimary : AppColors.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+            const Icon(Icons.wifi_off, color: AppColors.outline, size: 40),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.onSurfaceVariant)),
+            const SizedBox(height: 16),
+            OutlinedButton(
+              onPressed: () {
+                setState(() {
+                  _loadingMaterials = true;
+                  _materialsError = null;
+                });
+                _loadMaterials();
               },
+              child: const Text('Reintentar'),
             ),
-            const SizedBox(height: 20),
-
-            // CANTIDAD ESTIMADA
-            _buildLabel('Cantidad Estimada'),
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: _buildTextField(
-                    controller: _quantityController,
-                    hint: 'Ej. 5',
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 1,
-                  child: Container(
-                    height: 52,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceContainerLowest,
-                      border: Border.all(color: AppColors.outlineVariant),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedUnit,
-                        isExpanded: true,
-                        icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.onSurfaceVariant),
-                        items: _units.map((String unit) {
-                          return DropdownMenuItem<String>(
-                            value: unit,
-                            child: Text(
-                              unit,
-                              style: const TextStyle(
-                                color: AppColors.onSurface,
-                                fontSize: 14,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          if (newValue != null) {
-                            setState(() {
-                              _selectedUnit = newValue;
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // DISPONIBILIDAD DE RECOJO
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildLabel('Disponibilidad de Recojo'),
-                const Text(
-                  'Hoy',
-                  style: TextStyle(
-                    color: Colors.blue, // Using a blue accent to match image
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-            Row(
-              children: _timeSlots.map((slot) {
-                final isSelected = _selectedTimeSlot == slot['name'];
-                return Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(right: slot == _timeSlots.last ? 0 : 8.0),
-                    child: InkWell(
-                      onTap: () {
-                        setState(() {
-                          _selectedTimeSlot = slot['name'];
-                        });
-                      },
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        height: 70,
-                        decoration: BoxDecoration(
-                          color: isSelected ? AppColors.primary : AppColors.surfaceContainerLowest,
-                          border: Border.all(
-                            color: isSelected ? AppColors.primary : AppColors.surfaceContainerHighest,
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              slot['icon'],
-                              color: isSelected ? AppColors.onPrimary : AppColors.onSurfaceVariant,
-                              size: 24,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              slot['name'],
-                              style: TextStyle(
-                                color: isSelected ? AppColors.onPrimary : AppColors.onSurfaceVariant,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 32),
-
-            // BOTÓN DE ACCIÓN
-            SizedBox(
-              width: double.infinity,
-              height: 54, // Tap target
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.onPrimary,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), 
-                ),
-                onPressed: _submitForm,
-                icon: const Icon(Icons.send, size: 18),
-                label: const Text(
-                  'Publicar Reciclaje',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLabel(String text) {
+  Widget _buildForm() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionLabel('Evidencia (opcional)'),
+          _buildPhotoPicker(),
+          const SizedBox(height: 24),
+
+          _sectionLabel('Dirección de recojo'),
+          TextField(
+            controller: _addressController,
+            decoration: const InputDecoration(hintText: 'Ej. Av. Las Begonias 450, Dpto 302'),
+          ),
+          const SizedBox(height: 20),
+
+          _sectionLabel('Notas adicionales (opcional)'),
+          TextField(
+            controller: _notesController,
+            maxLines: 3,
+            decoration: const InputDecoration(hintText: 'Describe el estado del material, referencias de acceso...'),
+          ),
+          const SizedBox(height: 20),
+
+          _sectionLabel('Tipo de material'),
+          _buildMaterialSelector(),
+          const SizedBox(height: 20),
+
+          _sectionLabel('Peso estimado'),
+          TextField(
+            controller: _weightController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(hintText: 'Ej. 3.5', suffixText: 'kg'),
+          ),
+          const SizedBox(height: 20),
+
+          _sectionLabel('Disponibilidad de recojo'),
+          _buildDayPicker(),
+          const SizedBox(height: 12),
+          _buildTimeSlotPicker(),
+          const SizedBox(height: 32),
+
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _isSubmitting ? null : _submitForm,
+              icon: _isSubmitting
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.send_outlined, size: 18),
+              label: Text(_isSubmitting ? 'Publicando...' : 'Publicar'),
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Text(
         text,
         style: const TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-          color: AppColors.onSurfaceVariant,
-          letterSpacing: 1.1,
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+          color: AppColors.onSurface,
         ),
       ),
     );
   }
 
-  Widget _buildTextField({
-    required String hint,
-    int maxLines = 1,
-    TextEditingController? controller,
-  }) {
-    return TextField(
-      controller: controller,
-      maxLines: maxLines,
-      style: const TextStyle(color: AppColors.onSurface),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: AppColors.outline, fontSize: 14),
-        filled: true,
-        fillColor: AppColors.surfaceContainerLowest,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.outlineVariant),
+  Widget _buildPhotoPicker() {
+    if (_selectedImage == null) {
+      return InkWell(
+        onTap: _pickImage,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 28),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.outlineVariant),
+          ),
+          child: const Column(
+            children: [
+              Icon(Icons.add_a_photo_outlined, color: AppColors.onSurfaceVariant, size: 28),
+              SizedBox(height: 8),
+              Text('Agregar una foto', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 13)),
+            ],
+          ),
         ),
-        enabledBorder: OutlineInputBorder(
+      );
+    }
+    return Stack(
+      children: [
+        ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.outlineVariant),
+          child: Image.file(File(_selectedImage!.path), width: double.infinity, height: 160, fit: BoxFit.cover),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.primary),
+        Positioned(
+          top: 8,
+          right: 8,
+          child: InkWell(
+            onTap: () => setState(() => _selectedImage = null),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+              child: const Icon(Icons.close, color: Colors.white, size: 16),
+            ),
+          ),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      ),
+      ],
+    );
+  }
+
+  Widget _buildMaterialSelector() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _materials.map((material) {
+        final isSelected = _selectedMaterial?.id == material.id;
+        return ChoiceChip(
+          label: Text(material.name),
+          selected: isSelected,
+          onSelected: (_) => setState(() => _selectedMaterial = material),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildDayPicker() {
+    return Row(
+      children: _weekDays.map((day) {
+        final isSelected = _selectedDay == day.index;
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: InkWell(
+              onTap: () => setState(() => _selectedDay = day.index),
+              borderRadius: BorderRadius.circular(4),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary : AppColors.surfaceContainerLowest,
+                  border: Border.all(color: isSelected ? AppColors.primary : AppColors.outlineVariant),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  day.label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected ? AppColors.onPrimary : AppColors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildTimeSlotPicker() {
+    return Row(
+      children: _timeSlots.map((slot) {
+        final isSelected = _selectedSlot.label == slot.label;
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(right: slot == _timeSlots.last ? 0 : 8.0),
+            child: InkWell(
+              onTap: () => setState(() => _selectedSlot = slot),
+              borderRadius: BorderRadius.circular(4),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary : AppColors.surfaceContainerLowest,
+                  border: Border.all(color: isSelected ? AppColors.primary : AppColors.outlineVariant),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Column(
+                  children: [
+                    Icon(slot.icon, size: 20, color: isSelected ? AppColors.onPrimary : AppColors.onSurfaceVariant),
+                    const SizedBox(height: 4),
+                    Text(
+                      slot.label,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected ? AppColors.onPrimary : AppColors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
