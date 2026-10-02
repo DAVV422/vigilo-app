@@ -32,7 +32,10 @@ abstract class AuthRepository {
   /// usuario de relleno como hacía el mock anterior.
   Future<User?> restoreSession();
 
-  Future<void> logout();
+  /// [pushToken], si se provee, se envía al backend para desvincularlo del
+  /// usuario (ver `POST /auth/logout`) y así dejar de recibir push de una
+  /// sesión que ya cerró.
+  Future<void> logout({String? pushToken});
 
   Future<RoleRequestResult> requestRole({
     required String role,

@@ -117,10 +117,10 @@ class RemoteAuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<void> logout() async {
+  Future<void> logout({String? pushToken}) async {
     final refreshToken = await _sessionStorage.getRefreshToken();
     try {
-      await _datasource.logout(refreshToken: refreshToken);
+      await _datasource.logout(refreshToken: refreshToken, pushToken: pushToken);
     } finally {
       await _sessionStorage.clear();
     }

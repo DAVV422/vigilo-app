@@ -4,12 +4,14 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import '../../core/network/api_client.dart';
+import '../../core/push/push_notification_service.dart';
 import '../../core/storage/secure_session_storage.dart';
 import '../../data/datasources/local_json_datasource.dart';
 import '../../data/datasources/remote/remote_auth_datasource.dart';
 import '../../data/datasources/remote/remote_analytics_datasource.dart';
 import '../../data/datasources/remote/remote_incident_datasource.dart';
 import '../../data/datasources/remote/remote_media_datasource.dart';
+import '../../data/datasources/remote/remote_notifications_datasource.dart';
 import '../../data/datasources/remote/remote_recycling_datasource.dart';
 import '../../data/datasources/remote/remote_store_datasource.dart';
 import '../../data/models/company_model.dart';
@@ -18,6 +20,7 @@ import '../../data/repositories/remote_analytics_repository_impl.dart';
 import '../../data/repositories/remote_auth_repository_impl.dart';
 import '../../data/repositories/remote_incident_repository_impl.dart';
 import '../../data/repositories/remote_media_repository_impl.dart';
+import '../../data/repositories/remote_notifications_repository_impl.dart';
 import '../../data/repositories/remote_points_repository_impl.dart';
 import '../../data/repositories/remote_recycling_repository_impl.dart';
 import '../../data/repositories/remote_store_repository_impl.dart';
@@ -30,6 +33,7 @@ import '../../domain/repositories/analytics_repository.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/incident_repository.dart';
 import '../../domain/repositories/media_repository.dart';
+import '../../domain/repositories/notifications_repository.dart';
 import '../../domain/repositories/points_repository.dart';
 import '../../domain/repositories/recycling_repository.dart';
 import '../../domain/repositories/store_repository.dart';
@@ -99,6 +103,15 @@ final storeRepositoryProvider = Provider<StoreRepository>((ref) {
   return RemoteStoreRepositoryImpl(RemoteStoreDatasource(client));
 });
 
+final notificationsRepositoryProvider = Provider<NotificationsRepository>((ref) {
+  final client = ref.watch(apiClientProvider);
+  return RemoteNotificationsRepositoryImpl(RemoteNotificationsDatasource(client));
+});
+
+final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) {
+  return PushNotificationService();
+});
+
 // --- Auth State ---
 final authProvider = NotifierProvider<AuthNotifier, User?>(AuthNotifier.new);
 
@@ -110,14 +123,33 @@ class AuthNotifier extends Notifier<User?> {
     if (!_bootstrapped) {
       _bootstrapped = true;
       _restoreSession();
+      final sub = ref.read(pushNotificationServiceProvider).onTokenRefresh.listen((token) {
+        if (state != null) _registerPushToken(token: token);
+      });
+      ref.onDispose(sub.cancel);
     }
     return null;
+  }
+
+  /// Best-effort: un fallo al pedir permiso o registrar el token no debe
+  /// impedir que el usuario use la app, así que cualquier error se traga.
+  Future<void> _registerPushToken({String? token}) async {
+    try {
+      final push = ref.read(pushNotificationServiceProvider);
+      final resolvedToken = token ?? await push.requestPermissionAndGetToken();
+      if (resolvedToken == null) return;
+      await ref.read(notificationsRepositoryProvider).registerPushToken(
+        token: resolvedToken,
+        platform: push.platform,
+      );
+    } catch (_) {}
   }
 
   Future<void> _restoreSession() async {
     try {
       final repo = ref.read(authRepositoryProvider);
       state = await repo.restoreSession();
+      if (state != null) await _registerPushToken();
     } catch (_) {
       state = null;
     }
@@ -129,6 +161,7 @@ class AuthNotifier extends Notifier<User?> {
   Future<void> login(String email, String password) async {
     final repo = ref.read(authRepositoryProvider);
     state = await repo.login(email: email.trim(), password: password.trim());
+    await _registerPushToken();
   }
 
   Future<void> register({
@@ -148,6 +181,7 @@ class AuthNotifier extends Notifier<User?> {
       username: username.trim(),
       phone: phone?.trim(),
     );
+    await _registerPushToken();
   }
 
   Future<void> reloadUser() async {
@@ -159,7 +193,8 @@ class AuthNotifier extends Notifier<User?> {
 
   Future<void> logout() async {
     try {
-      await ref.read(authRepositoryProvider).logout();
+      final pushToken = await ref.read(pushNotificationServiceProvider).getCurrentToken();
+      await ref.read(authRepositoryProvider).logout(pushToken: pushToken);
     } finally {
       state = null;
     }
