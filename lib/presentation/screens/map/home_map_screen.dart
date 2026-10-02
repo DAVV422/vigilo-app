@@ -358,6 +358,21 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
     final user = ref.watch(authProvider);
     final proximityIncidents = ref.watch(proximityNotifierProvider);
 
+    // El shell (DashboardScreen) mantiene este widget vivo en un IndexedStack,
+    // así que initState solo corre una vez: cualquier foco posterior sobre un
+    // incidente (ej. tap en una notificación push) debe llegar por aquí.
+    ref.listen<Incident?>(selectedIncidentProvider, (previous, next) {
+      if (next == null) return;
+      ref.read(currentNavIndexProvider.notifier).goToMap();
+      _mapController.move(next.location, 17.0);
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _showIncidentDetail(next);
+        }
+      });
+      ref.read(selectedIncidentProvider.notifier).clear();
+    });
+
     final incidents = ref.watch(incidentsProvider);
     final activeIncidents = incidents.where((i) => i.status == IncidentStatus.active).toList();
 

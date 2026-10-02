@@ -27,6 +27,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(proximityNotifierProvider.notifier).start();
+    });
+  }
+
+  @override
+  void dispose() {
+    ref.read(proximityNotifierProvider.notifier).stop();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final currentIndex = ref.watch(currentNavIndexProvider);
 
@@ -40,6 +54,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         currentIndex: currentIndex,
         onTap: (index) {
           ref.read(currentNavIndexProvider.notifier).setIndex(index);
+          if (index != 0) {
+            ref.read(selectedIncidentProvider.notifier).clear();
+          }
         },
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppColors.primary,

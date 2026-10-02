@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/api_exception.dart';
 import '../theme/app_colors.dart';
 import '../presentation/providers/providers.dart';
-import 'main_wrapper_screen.dart';
+import '../presentation/screens/dashboard/dashboard_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -40,7 +40,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const MainWrapperScreen()),
+          MaterialPageRoute(builder: (context) => const DashboardScreen()),
         );
       }
     } catch (e) {
