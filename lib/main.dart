@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'presentation/screens/splash/splash_screen.dart';
-import 'theme/app_colors.dart';
+import 'theme/app_theme.dart';
 
 void main() {
   runApp(
@@ -19,14 +19,7 @@ class VigiloApp extends StatelessWidget {
     return MaterialApp(
       title: 'Vigilo',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
-        useMaterial3: true,
-        scaffoldBackgroundColor: AppColors.background,
-        bottomSheetTheme: const BottomSheetThemeData(
-          backgroundColor: Colors.transparent,
-        ),
-      ),
+      theme: AppTheme.light(),
       home: const SplashScreen(),
     );
   }
