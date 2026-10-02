@@ -42,12 +42,6 @@ class User {
     this.ratingsCount = 0,
   });
 
-  String get level {
-    if (points < 100) return 'Novato';
-    if (points < 500) return 'Ciudadano Activo';
-    return 'Héroe';
-  }
-
   bool get isEmployee => companyId != null && companyId!.isNotEmpty;
 
   /// Verifica si este usuario puede resolver un tipo de incidente dado

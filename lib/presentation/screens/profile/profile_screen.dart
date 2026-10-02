@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../domain/entities/user.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_icons.dart';
-import '../../../domain/entities/incident.dart';
 import '../../providers/providers.dart';
 import '../../../widgets/main_app_bar.dart';
 
+/// Reescrito para dejar de mostrar datos inventados (galería de medallas y
+/// tiempos de respuesta por categoría eran 100% hardcodeados, sin relación
+/// con datos reales) y un lenguaje de gamificación tipo videojuego
+/// ("Héroe", "Leyenda", medallas con nombres como "Halcón") que no encaja
+/// con el tono profesional que se busca para el producto. Todo lo que se
+/// muestra ahora sale de `authProvider`/`incidentsProvider` (backend real).
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
@@ -14,7 +21,64 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  bool _isRecycleModeActive = true;
+  bool _requestingRecyclerRole = false;
+
+  // Nombres de nivel neutros en vez de "Novato/Héroe/Leyenda".
+  static const _levelTiers = [
+    (min: 0, name: 'Nivel 1'),
+    (min: 100, name: 'Nivel 2'),
+    (min: 500, name: 'Nivel 3'),
+  ];
+
+  Future<void> _requestRecyclerRole() async {
+    final dniController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Activar rol de reciclador'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Ingresa tu número de documento (DNI) para verificar tu identidad.',
+              style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: dniController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(hintText: 'Ej. 12345678'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Activar')),
+        ],
+      ),
+    );
+    if (confirmed != true || dniController.text.trim().isEmpty) return;
+
+    setState(() => _requestingRecyclerRole = true);
+    try {
+      final result = await ref.read(authRepositoryProvider).requestRole(
+            role: 'RECYCLER_INDIVIDUAL',
+            idDocumentType: 'DNI',
+            idDocumentNumber: dniController.text.trim(),
+          );
+      await ref.read(authProvider.notifier).reloadUser();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.message)));
+    } catch (e) {
+      if (!mounted) return;
+      final message = e is ApiException ? e.message : 'No se pudo activar el rol.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: AppColors.error),
+      );
+    } finally {
+      if (mounted) setState(() => _requestingRecyclerRole = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,723 +91,286 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       );
     }
 
-    // Cálculos de XP y Rango
-    int currentLevelMin = 0;
-    int nextLevelMin = 100;
-    String nextLevelName = 'Ciudadano Activo';
-
-    if (user.points >= 500) {
-      currentLevelMin = 500;
-      nextLevelMin = 1000;
-      nextLevelName = 'Leyenda';
-    } else if (user.points >= 100) {
-      currentLevelMin = 100;
-      nextLevelMin = 500;
-      nextLevelName = 'Héroe';
+    var currentTier = _levelTiers.first;
+    var nextTierMin = _levelTiers[1].min;
+    for (var i = 0; i < _levelTiers.length; i++) {
+      if (user.points >= _levelTiers[i].min) {
+        currentTier = _levelTiers[i];
+        nextTierMin = i + 1 < _levelTiers.length ? _levelTiers[i + 1].min : _levelTiers[i].min;
+      }
     }
+    final isMaxTier = currentTier.min == _levelTiers.last.min;
+    final pointsInTier = user.points - currentTier.min;
+    final pointsForNextTier = (nextTierMin - currentTier.min).clamp(1, 1 << 30);
+    final progress = isMaxTier ? 1.0 : (pointsInTier / pointsForNextTier).clamp(0.0, 1.0);
 
-    final pointsInCurrentLevel = user.points - currentLevelMin;
-    final pointsNeededForNext = nextLevelMin - currentLevelMin;
-    final progress = (pointsInCurrentLevel / pointsNeededForNext).clamp(0.0, 1.0);
-
-    // Cálculos dinámicos reales de contribuciones
     final reportadosCount = incidents.where((i) => i.reportedByUserId == user.id).length;
-    final validadosCount = incidents.where((i) => i.validatorsIds.contains(user.id)).length;
-    final resueltosCount = incidents.where((i) => i.resolvedByUserId == user.id).length;
-
-    // Rendimiento Global 
-    final globalReportados = incidents.length;
-    final globalResueltos = incidents.where((i) => i.status == IncidentStatus.resolved).length;
-    final globalEficiencia = globalReportados > 0 ? (globalResueltos / globalReportados * 100).round() : 0;
+    final isRecycler = user.roles.contains(UserRole.recycling);
 
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const MainAppBar(title: 'Perfil'),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
         physics: const BouncingScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. Tarjeta Principal (Verde)
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          blurRadius: 20,
-                          spreadRadius: 4,
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: user.avatarUrl.startsWith('http')
-                          ? Image.network(
-                              user.avatarUrl,
-                              width: 70,
-                              height: 70,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(AppIcons.person, size: 70, color: Colors.white),
-                            )
-                          : const SizedBox(
-                              width: 70,
-                              height: 70,
-                              child: Icon(AppIcons.person, size: 50, color: Colors.white),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '${user.name} ${user.lastName}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '@${user.username}',
-                    style: const TextStyle(
-                      color: AppColors.primaryFixed,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildHeader(user),
             const SizedBox(height: 16),
-
-            // 2. Rango y Puntos
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'RANGO ACTUAL',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.onSurfaceVariant,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                      const Text(
-                        'TOTAL PUNTOS',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.onSurfaceVariant,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.stars, color: Colors.orange, size: 18),
-                          const SizedBox(width: 6),
-                          Text(
-                            user.level.toUpperCase(),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.onSurface,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        '${user.points} PTS',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.onSurface,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 6,
-                      backgroundColor: AppColors.surfaceVariant,
-                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'XP: $pointsInCurrentLevel / $pointsNeededForNext para el próximo nivel $nextLevelName',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.onSurfaceVariant,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildLevelCard(user, currentTier.name, pointsInTier, pointsForNextTier, isMaxTier, progress),
             const SizedBox(height: 16),
-
-            // 3. Modo Reciclaje
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: AppColors.surfaceVariant,
-                    radius: 20,
-                    child: const Icon(AppIcons.recycling, color: AppColors.onSurfaceVariant, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Modo Reciclaje',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.onSurface,
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Activa para poder resolver\nincidentes de reciclaje',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Switch(
-                    value: _isRecycleModeActive,
-                    activeThumbColor: Colors.white,
-                    activeTrackColor: AppColors.outline,
-                    inactiveThumbColor: AppColors.outline,
-                    inactiveTrackColor: AppColors.surfaceVariant,
-                    onChanged: (val) {
-                      setState(() {
-                        _isRecycleModeActive = val;
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
+            _buildTrustScoreCard(user),
             const SizedBox(height: 16),
-
-            // 4. Mis Contribuciones Ciudadanas
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.grid_view_rounded, size: 16, color: AppColors.onSurfaceVariant),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'MIS CONTRIBUCIONES CIUDADANAS',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.onSurface,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildContributionItem(
-                        icon: Icons.campaign_outlined,
-                        iconColor: AppColors.error,
-                        boxColor: AppColors.errorContainer.withValues(alpha: 0.5),
-                        value: reportadosCount,
-                        label: 'REPORTADOS',
-                      ),
-                      _buildContributionItem(
-                        icon: AppIcons.thumbUp,
-                        iconColor: AppColors.warning,
-                        boxColor: AppColors.tertiaryFixed,
-                        value: validadosCount,
-                        label: 'VALIDADOS',
-                      ),
-                      _buildContributionItem(
-                        icon: Icons.domain_verification,
-                        iconColor: AppColors.primary,
-                        boxColor: AppColors.primaryFixed.withValues(alpha: 0.3),
-                        value: resueltosCount,
-                        label: 'RESUELTOS',
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            _buildRecyclerRoleCard(isRecycler),
             const SizedBox(height: 16),
-
-            // 5. Galería de Medallas
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.emoji_events_outlined, size: 16, color: AppColors.primary),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'GALERÍA DE MEDALLAS',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.onSurface,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 120,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: [
-                        _buildMedalItem(
-                          icon: AppIcons.securityShield,
-                          iconColor: AppColors.primary,
-                          title: 'Vigilante',
-                          subtitle: 'Reportó 1\nalerta',
-                          borderColor: AppColors.primaryFixedDim,
-                        ),
-                        _buildMedalItem(
-                          icon: AppIcons.search,
-                          iconColor: AppColors.onSurface,
-                          title: 'Halcón',
-                          subtitle: 'Validó 1\nalerta',
-                          borderColor: AppColors.tertiaryFixedDim,
-                        ),
-                        _buildMedalItem(
-                          icon: Icons.build,
-                          iconColor: AppColors.outlineVariant,
-                          title: 'Solucionador',
-                          subtitle: 'Resolvió 1\nalerta',
-                          borderColor: AppColors.surfaceVariant,
-                          isInactive: true,
-                        ),
-                        _buildMedalItem(
-                          icon: Icons.bolt,
-                          iconColor: AppColors.warning,
-                          title: 'Explorador',
-                          subtitle: 'Caminó en\nradar',
-                          borderColor: AppColors.tertiaryFixedDim,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildActivityCard(reportadosCount),
             const SizedBox(height: 16),
-
-            // 6. Rendimiento de resolución general
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.bar_chart, size: 16, color: AppColors.primary),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: Text(
-                          'RENDIMIENTO DE RESOLUCIÓN\nGENERAL',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.onSurface,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildPerformanceStat(
-                        value: globalReportados.toString(),
-                        label: 'REPORTADOS',
-                        valueColor: AppColors.error,
-                      ),
-                      _buildPerformanceStat(
-                        value: globalResueltos.toString(),
-                        label: 'RESUELTOS',
-                        valueColor: AppColors.primary,
-                      ),
-                      _buildPerformanceStat(
-                        value: '$globalEficiencia%',
-                        label: 'EFICIENCIA',
-                        valueColor: AppColors.primary,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  const Divider(color: AppColors.surfaceVariant),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'TIEMPOS DE RESPUESTA PROMEDIO EN LA CIUDAD',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.onSurface,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildResponseTimeItem(
-                    icon: AppIcons.security,
-                    iconColor: AppColors.error,
-                    title: 'Seguridad',
-                    time: '45 min',
-                    badgeText: 'Respuesta inmediata',
-                    badgeColor: AppColors.primaryFixedDim,
-                    badgeTextColor: AppColors.onPrimaryFixedVariant,
-                    progress: 0.2, // short
-                    barColor: AppColors.primary,
-                  ),
-                  _buildResponseTimeItem(
-                    icon: Icons.delete_outline,
-                    iconColor: AppColors.secondary, // blueish in mockup? Let's use blue or app color
-                    title: 'Basura',
-                    time: '1.0 días',
-                    badgeText: 'Estándar',
-                    badgeColor: AppColors.tertiaryFixed,
-                    badgeTextColor: AppColors.onTertiaryFixedVariant,
-                    progress: 0.5,
-                    barColor: AppColors.tertiary,
-                  ),
-                  _buildResponseTimeItem(
-                    icon: AppIcons.weeds,
-                    iconColor: AppColors.primary,
-                    title: 'Maleza',
-                    time: '2.0 días',
-                    badgeText: 'Programado',
-                    badgeColor: AppColors.tertiaryFixed,
-                    badgeTextColor: AppColors.onTertiaryFixedVariant,
-                    progress: 0.7,
-                    barColor: AppColors.tertiary,
-                  ),
-                  _buildResponseTimeItem(
-                    icon: AppIcons.recycling,
-                    iconColor: AppColors.primary,
-                    title: 'Reciclaje',
-                    time: '3.0 horas',
-                    badgeText: 'Coordinado',
-                    badgeColor: AppColors.tertiaryFixed,
-                    badgeTextColor: AppColors.onTertiaryFixedVariant,
-                    progress: 0.4,
-                    barColor: AppColors.tertiary,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // 7. Contacto
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceVariant,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.email_outlined, color: AppColors.primary, size: 20),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Correo Electrónico', style: TextStyle(fontSize: 10, color: AppColors.onSurfaceVariant, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 2),
-                        Text(user.email, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildContactCard(Icons.email_outlined, 'Correo electrónico', user.email),
             const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceVariant,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.phone_outlined, color: AppColors.primary, size: 20),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Celular', style: TextStyle(fontSize: 10, color: AppColors.onSurfaceVariant, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 2),
-                        Text(user.phone, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+            if (user.phone.isNotEmpty)
+              _buildContactCard(Icons.phone_outlined, 'Celular', user.phone),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => ref.read(authProvider.notifier).logout(),
+              icon: const Icon(Icons.logout, size: 18),
+              label: const Text('Cerrar sesión'),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildContributionItem({
-    required IconData icon,
-    required Color iconColor,
-    required Color boxColor,
-    required int value,
-    required String label,
-  }) {
-    return Column(
-      children: [
-        Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: boxColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: iconColor, size: 24),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          value.toString(),
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: iconColor,
-          ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.bold,
-            color: AppColors.onSurfaceVariant,
-            letterSpacing: 0.5,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMedalItem({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String subtitle,
-    required Color borderColor,
-    bool isInactive = false,
-  }) {
+  Widget _buildHeader(dynamic user) {
     return Container(
-      width: 80,
-      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Column(
         children: [
           Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: isInactive ? AppColors.surfaceVariant : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: borderColor, width: 1.5),
+            width: 72,
+            height: 72,
+            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+            child: ClipOval(
+              child: user.avatarUrl.toString().startsWith('http')
+                  ? Image.network(
+                      user.avatarUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Icon(AppIcons.person, size: 40, color: AppColors.primary),
+                    )
+                  : const Icon(AppIcons.person, size: 40, color: AppColors.primary),
             ),
-            child: Icon(icon, color: iconColor, size: 24),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 12),
           Text(
-            title,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: isInactive ? AppColors.outlineVariant : AppColors.onSurface,
-            ),
-            textAlign: TextAlign.center,
+            '${user.name} ${user.lastName}'.trim(),
+            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 2),
           Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 9,
-              color: isInactive ? AppColors.outlineVariant : AppColors.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
+            '@${user.username}',
+            style: TextStyle(color: AppColors.primaryFixed, fontSize: 13),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPerformanceStat({
-    required String value,
-    required String label,
-    required Color valueColor,
-  }) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: valueColor,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.bold,
-            color: AppColors.onSurfaceVariant,
-            letterSpacing: 0.5,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildResponseTimeItem({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String time,
-    required String badgeText,
-    required Color badgeColor,
-    required Color badgeTextColor,
-    required double progress,
-    required Color barColor,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
+  Widget _buildLevelCard(
+    dynamic user,
+    String tierName,
+    int pointsInTier,
+    int pointsForNextTier,
+    bool isMaxTier,
+    double progress,
+  ) {
+    return _card(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(icon, color: iconColor, size: 16),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
-              ),
-              const Spacer(),
-              Text(
-                time,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.onSurfaceVariant),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: badgeColor,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Row(
-                  children: [
-                    if (badgeText == 'Respuesta inmediata')
-                       Icon(Icons.bolt, color: badgeTextColor, size: 10),
-                    Text(
-                      badgeText,
-                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: badgeTextColor),
-                    ),
-                  ],
-                ),
-              ),
+              _label('NIVEL'),
+              _label('PUNTOS'),
             ],
           ),
           const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(tierName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.onSurface)),
+              Text('${user.points}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.onSurface)),
+            ],
+          ),
+          const SizedBox(height: 14),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: progress,
-              minHeight: 4,
+              minHeight: 6,
               backgroundColor: AppColors.surfaceVariant,
-              valueColor: AlwaysStoppedAnimation<Color>(barColor),
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isMaxTier
+                ? 'Nivel máximo alcanzado'
+                : '$pointsInTier / $pointsForNextTier puntos para el siguiente nivel',
+            style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrustScoreCard(dynamic user) {
+    return _card(
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(color: AppColors.surfaceContainerLow, borderRadius: BorderRadius.circular(8)),
+            child: const Icon(Icons.verified_outlined, color: AppColors.primary, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Reputación', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.onSurface)),
+                const SizedBox(height: 2),
+                Text(
+                  user.ratingsCount > 0
+                      ? 'Calificación de ${user.trustScore.toStringAsFixed(1)} / 5 (${user.ratingsCount} reseñas)'
+                      : 'Todavía no tienes calificaciones',
+                  style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                ),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRecyclerRoleCard(bool isRecycler) {
+    return _card(
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(color: AppColors.surfaceContainerLow, borderRadius: BorderRadius.circular(8)),
+            child: const Icon(AppIcons.recycling, color: AppColors.primary, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Rol de reciclador', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.onSurface)),
+                const SizedBox(height: 2),
+                Text(
+                  isRecycler
+                      ? 'Activo — puedes reclamar publicaciones de reciclaje'
+                      : 'Actívalo para poder recoger material publicado por otros usuarios',
+                  style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          if (!isRecycler)
+            _requestingRecyclerRole
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : TextButton(onPressed: _requestRecyclerRole, child: const Text('Activar')),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActivityCard(int reportadosCount) {
+    return _card(
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(color: AppColors.surfaceContainerLow, borderRadius: BorderRadius.circular(8)),
+            child: const Icon(Icons.campaign_outlined, color: AppColors.onSurfaceVariant, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Reportes cercanos', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.onSurface)),
+                const SizedBox(height: 2),
+                Text(
+                  '$reportadosCount reporte(s) tuyos en tu zona',
+                  style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContactCard(IconData icon, String label, String value) {
+    return _card(
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: AppColors.surfaceContainerLow, borderRadius: BorderRadius.circular(8)),
+            child: Icon(icon, color: AppColors.primary, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontSize: 10, color: AppColors.onSurfaceVariant, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.onSurface)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _card({required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        border: Border.all(color: AppColors.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: child,
+    );
+  }
+
+  Widget _label(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.w600,
+        color: AppColors.onSurfaceVariant,
+        letterSpacing: 0.6,
       ),
     );
   }
