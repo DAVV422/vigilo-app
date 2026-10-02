@@ -35,7 +35,11 @@ class IncidentRepositoryImpl implements IncidentRepository {
   }
 
   @override
-  Future<void> validateIncident(String incidentId, String userId) async {
+  Future<void> validateIncident(
+    String incidentId,
+    String userId, {
+    IncidentVote vote = IncidentVote.stillPresent,
+  }) async {
     final data = await datasource.readData();
     
     final usersJson = data['users'] as List<dynamic>;
@@ -59,9 +63,10 @@ class IncidentRepositoryImpl implements IncidentRepository {
   Future<void> resolveIncident({
     required String incidentId,
     required String userId,
-    required String companyId,
-    required String companyName,
+    String? companyId,
+    String? companyName,
     required String comment,
+    String? resolutionMediaId,
   }) async {
     final data = await datasource.readData();
     
@@ -75,7 +80,7 @@ class IncidentRepositoryImpl implements IncidentRepository {
 
     final companyNameResolved = companies.firstWhere(
       (c) => c.id == companyId,
-      orElse: () => CompanyModel(id: '', name: companyName),
+      orElse: () => CompanyModel(id: '', name: companyName ?? 'Vigilo'),
     ).name;
 
     final index = incidents.indexWhere((i) => i.id == incidentId);
