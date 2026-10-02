@@ -5,7 +5,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../domain/entities/incident.dart';
 import '../../../domain/entities/user.dart';
 import '../../../domain/repositories/incident_repository.dart' show IncidentVote;
@@ -206,8 +205,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
       if (status == AnimationStatus.completed) {
         _triggerRadarPulse();
         ref.read(proximityNotifierProvider.notifier).checkNow();
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('vigilo_achievement_walked', true);
       }
     });
 
@@ -320,9 +317,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
 
       await ref.read(incidentsProvider.notifier).addIncident(newIncident);
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('vigilo_achievement_reported', true);
-
       setState(() {
         _isSelectingLocation = false;
         _selectedTypeForReport = null;
@@ -331,7 +325,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Reporte creado exitosamente (+3 puntos).'),
+            content: Text('Reporte creado exitosamente.'),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
           ),
@@ -883,7 +877,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
           : ElevatedButton.icon(
                   onPressed: _startReportFlow,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF004D25), // Dark green as seen in first image
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     elevation: 4,
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),

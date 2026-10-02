@@ -14,8 +14,8 @@ class MainAppBar extends ConsumerWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider);
-    final userName = user?.name ?? 'Carlos Mendoza';
-    final userInitials = userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : 'C';
+    final userName = user?.name ?? '';
+    final userInitials = userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : '?';
 
     return AppBar(
       backgroundColor: Colors.white,
