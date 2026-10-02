@@ -7,12 +7,14 @@ import '../../core/network/api_client.dart';
 import '../../core/storage/secure_session_storage.dart';
 import '../../data/datasources/local_json_datasource.dart';
 import '../../data/datasources/remote/remote_auth_datasource.dart';
+import '../../data/datasources/remote/remote_analytics_datasource.dart';
 import '../../data/datasources/remote/remote_incident_datasource.dart';
 import '../../data/datasources/remote/remote_media_datasource.dart';
 import '../../data/datasources/remote/remote_recycling_datasource.dart';
 import '../../data/datasources/remote/remote_store_datasource.dart';
 import '../../data/models/company_model.dart';
 import '../../data/models/store_product_model.dart';
+import '../../data/repositories/remote_analytics_repository_impl.dart';
 import '../../data/repositories/remote_auth_repository_impl.dart';
 import '../../data/repositories/remote_incident_repository_impl.dart';
 import '../../data/repositories/remote_media_repository_impl.dart';
@@ -24,6 +26,7 @@ import '../../domain/entities/company.dart';
 import '../../domain/entities/incident.dart';
 import '../../domain/entities/store_product.dart';
 import '../../domain/entities/user.dart';
+import '../../domain/repositories/analytics_repository.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/incident_repository.dart';
 import '../../domain/repositories/media_repository.dart';
@@ -84,6 +87,11 @@ final recyclingRepositoryProvider = Provider<RecyclingRepository>((ref) {
 final mediaRepositoryProvider = Provider<MediaRepository>((ref) {
   final client = ref.watch(apiClientProvider);
   return RemoteMediaRepositoryImpl(RemoteMediaDatasource(client));
+});
+
+final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
+  final client = ref.watch(apiClientProvider);
+  return RemoteAnalyticsRepositoryImpl(RemoteAnalyticsDatasource(client));
 });
 
 final storeRepositoryProvider = Provider<StoreRepository>((ref) {
