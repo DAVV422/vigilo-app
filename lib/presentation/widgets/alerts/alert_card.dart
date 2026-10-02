@@ -45,11 +45,11 @@ class AlertCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(8.0),
         border: Border.all(color: AppColors.surfaceContainerHigh),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(8.0),
         child: Container(
           decoration: BoxDecoration(
             border: Border(
@@ -73,7 +73,7 @@ class AlertCard extends StatelessWidget {
                     height: 44,
                     decoration: BoxDecoration(
                       color: _category.backgroundColor.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(12.0),
+                      borderRadius: BorderRadius.circular(8.0),
                     ),
                     child: Icon(
                       _category.icon,

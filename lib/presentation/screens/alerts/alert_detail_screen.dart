@@ -86,7 +86,7 @@ class AlertDetailScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: _category.backgroundColor,
-                borderRadius: BorderRadius.circular(16.0),
+                borderRadius: BorderRadius.circular(8.0),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -159,14 +159,14 @@ class AlertDetailScreen extends ConsumerWidget {
                       ref.read(incidentsProvider.notifier).validateIncident(currentIncident.id, user.id);
                     }
                   },
-                  borderRadius: BorderRadius.circular(16.0),
+                  borderRadius: BorderRadius.circular(8.0),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: isValidatedByMe
                           ? AppColors.primaryContainer
                           : AppColors.surfaceContainer,
-                      borderRadius: BorderRadius.circular(16.0),
+                      borderRadius: BorderRadius.circular(8.0),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -205,7 +205,7 @@ class AlertDetailScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(16.0),
               decoration: BoxDecoration(
                 color: AppColors.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(16.0),
+                borderRadius: BorderRadius.circular(8.0),
               ),
               child: Text(
                 currentIncident.description,
@@ -221,7 +221,7 @@ class AlertDetailScreen extends ConsumerWidget {
             // Imagen del incidente si existe, de lo contrario un placeholder
             if (currentIncident.imageUrl.isNotEmpty)
               ClipRRect(
-                borderRadius: BorderRadius.circular(16.0),
+                borderRadius: BorderRadius.circular(8.0),
                 child: Image.network(
                   currentIncident.imageUrl,
                   width: double.infinity,
@@ -244,7 +244,7 @@ class AlertDetailScreen extends ConsumerWidget {
       height: 200,
       decoration: BoxDecoration(
         color: AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(16.0),
+        borderRadius: BorderRadius.circular(8.0),
       ),
       child: const Center(
         child: Column(

@@ -69,8 +69,6 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surfaceContainerLowest,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -89,7 +87,7 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   elevation: 0,
                 ),
                 onPressed: () {
@@ -193,7 +191,7 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
               padding: const EdgeInsets.symmetric(vertical: 32),
               decoration: BoxDecoration(
                 color: AppColors.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: AppColors.surfaceContainerHigh),
               ),
               child: _selectedImages.isEmpty
@@ -201,12 +199,12 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
                       children: [
                         InkWell(
                           onTap: _pickImages,
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(8),
                           child: Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Icon(
                               Icons.add_a_photo_outlined,
@@ -243,7 +241,7 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
                           ..._selectedImages.map((file) => Stack(
                                 children: [
                                   ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(8),
                                     child: Image.file(
                                       File(file.path),
                                       width: 80,
@@ -275,13 +273,13 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
                           if (_selectedImages.length < 5)
                             InkWell(
                               onTap: _pickImages,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(8),
                               child: Container(
                                 width: 80,
                                 height: 80,
                                 decoration: BoxDecoration(
                                   color: AppColors.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(8),
                                   border: Border.all(color: AppColors.outlineVariant),
                                 ),
                                 child: const Icon(Icons.add, color: AppColors.onSurfaceVariant, size: 32),
@@ -313,17 +311,17 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
             _buildLabel('UBICACIÓN *'),
             InkWell(
               onTap: _openMapPicker,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(8),
               child: Container(
                 height: 140,
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: AppColors.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: AppColors.outlineVariant),
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(8),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -433,7 +431,7 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.onPrimary,
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), 
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), 
                 ),
                 onPressed: _submitReport,
                 icon: const Icon(Icons.send, size: 18),
