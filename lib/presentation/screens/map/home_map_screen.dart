@@ -349,6 +349,12 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
         return 'Maleza Reportada';
       case IncidentType.recycling:
         return 'Reciclaje Disponible';
+      case IncidentType.streetLight:
+        return 'Alumbrado Público';
+      case IncidentType.pothole:
+        return 'Bache Reportado';
+      case IncidentType.other:
+        return 'Reporte Urbano';
     }
   }
 
@@ -377,6 +383,11 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
           break;
         case IncidentType.recycling:
           incidentSeverity = 'Baja';
+          break;
+        case IncidentType.streetLight:
+        case IncidentType.pothole:
+        case IncidentType.other:
+          incidentSeverity = 'Media';
           break;
       }
       if (!_activeSeverities.contains(incidentSeverity)) return false;
@@ -413,6 +424,18 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
         case IncidentType.recycling:
           iconColor = AppColors.primary;
           iconData = Icons.recycling;
+          break;
+        case IncidentType.streetLight:
+          iconColor = AppColors.tertiary;
+          iconData = Icons.lightbulb_outline;
+          break;
+        case IncidentType.pothole:
+          iconColor = AppColors.secondary;
+          iconData = Icons.warning_amber;
+          break;
+        case IncidentType.other:
+          iconColor = AppColors.onSurfaceVariant;
+          iconData = Icons.report_outlined;
           break;
       }
 

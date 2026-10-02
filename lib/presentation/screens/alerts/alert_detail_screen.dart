@@ -24,6 +24,10 @@ class AlertDetailScreen extends ConsumerWidget {
         return AlertCategory.reciclaje;
       case IncidentType.weeds:
         return AlertCategory.maleza;
+      case IncidentType.streetLight:
+      case IncidentType.pothole:
+      case IncidentType.other:
+        return AlertCategory.seguridad;
     }
   }
 

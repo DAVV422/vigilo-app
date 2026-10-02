@@ -54,6 +54,12 @@ class AppActionButton extends StatelessWidget {
         bg = AppColors.surfaceContainerHighest;
         fg = AppColors.onSurfaceVariant;
         break;
+      case IncidentType.streetLight:
+      case IncidentType.pothole:
+      case IncidentType.other:
+        bg = AppColors.surfaceContainerHighest;
+        fg = AppColors.onSurfaceVariant;
+        break;
     }
 
     return AppActionButton(

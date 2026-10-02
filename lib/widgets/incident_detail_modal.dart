@@ -28,6 +28,10 @@ class IncidentDetailModal extends ConsumerWidget {
         return user.isEmployee && user.roles.contains(UserRole.cleaning);
       case IncidentType.recycling:
         return user.roles.contains(UserRole.recycling);
+      case IncidentType.streetLight:
+      case IncidentType.pothole:
+      case IncidentType.other:
+        return user.isEmployee;
     }
   }
 
@@ -128,6 +132,21 @@ class IncidentDetailModal extends ConsumerWidget {
         typeColor = AppColors.ecoGreen;
         typeIcon = Icons.recycling;
         typeLabel = 'Reciclaje';
+        break;
+      case IncidentType.streetLight:
+        typeColor = AppColors.tertiary;
+        typeIcon = Icons.lightbulb_outline;
+        typeLabel = 'Alumbrado';
+        break;
+      case IncidentType.pothole:
+        typeColor = AppColors.secondary;
+        typeIcon = Icons.warning_amber;
+        typeLabel = 'Bache';
+        break;
+      case IncidentType.other:
+        typeColor = AppColors.onSurfaceVariant;
+        typeIcon = Icons.report_outlined;
+        typeLabel = 'Otro';
         break;
     }
 

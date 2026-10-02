@@ -22,6 +22,10 @@ enum CategoryBadgeType {
         return CategoryBadgeType.weeds;
       case IncidentType.trash:
         return CategoryBadgeType.trash;
+      case IncidentType.streetLight:
+      case IncidentType.pothole:
+      case IncidentType.other:
+        return CategoryBadgeType.security;
     }
   }
 }

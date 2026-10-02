@@ -46,6 +46,9 @@ class ValidationCard extends StatelessWidget {
         case IncidentType.trash: return AppColors.tertiary; // Brown for trash based on image
         case IncidentType.weeds: return AppColors.tertiaryContainer;
         case IncidentType.recycling: return AppColors.primaryContainer;
+        case IncidentType.streetLight:
+        case IncidentType.pothole:
+        case IncidentType.other: return AppColors.tertiaryContainer;
       }
     }
 
@@ -55,6 +58,9 @@ class ValidationCard extends StatelessWidget {
         case IncidentType.trash: return AppColors.onTertiary;
         case IncidentType.weeds: return AppColors.onTertiaryContainer;
         case IncidentType.recycling: return AppColors.onPrimaryContainer;
+        case IncidentType.streetLight:
+        case IncidentType.pothole:
+        case IncidentType.other: return AppColors.onTertiaryContainer;
       }
     }
 
@@ -64,6 +70,9 @@ class ValidationCard extends StatelessWidget {
         case IncidentType.trash: return Icons.delete_outline;
         case IncidentType.weeds: return Icons.location_on;
         case IncidentType.recycling: return Icons.recycling;
+        case IncidentType.streetLight: return Icons.lightbulb_outline;
+        case IncidentType.pothole: return Icons.warning_amber;
+        case IncidentType.other: return Icons.report_outlined;
       }
     }
 
