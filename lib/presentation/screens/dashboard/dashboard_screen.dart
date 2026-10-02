@@ -1,9 +1,9 @@
 // lib/presentation/screens/dashboard/dashboard_screen.dart
 import 'dart:async';
-import 'dart:developer' as developer;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/logging/app_logger.dart';
 import '../../../domain/entities/incident.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_icons.dart';
@@ -21,6 +21,8 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  static const _log = AppLogger('Push');
+
   // Índice 0: Mapa (Vista activa inicial)
 
   final List<Widget> _screens = const [
@@ -54,7 +56,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _handleNotificationTap(RemoteMessage message) async {
-    developer.log('Notificación push tocada: ${message.data}', name: 'Push');
+    _log.info('Notificación push tocada: ${message.data}');
     final incidentId = message.data['incidentId'] as String?;
     if (incidentId == null) {
       ref.read(currentNavIndexProvider.notifier).goToAlerts();

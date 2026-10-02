@@ -1,7 +1,10 @@
 import 'package:dio/dio.dart';
 import '../config/app_config.dart';
+import '../logging/app_logger.dart';
 import '../storage/secure_session_storage.dart';
 import 'api_exception.dart';
+
+const _log = AppLogger('HTTP');
 
 /// Rutas que nunca deben disparar el flujo de refresh (evita bucles: un 401
 /// en el propio login/registro/refresh no significa "sesión vencida").
@@ -27,7 +30,7 @@ class ApiClient {
         ),
       ) {
     _dio.interceptors.add(
-      InterceptorsWrapper(onRequest: _onRequest, onError: _onError),
+      InterceptorsWrapper(onRequest: _onRequest, onResponse: _onResponse, onError: _onError),
     );
   }
 
@@ -47,13 +50,25 @@ class ApiClient {
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
     }
+    _log.info('-> ${options.method} ${options.path}');
     handler.next(options);
+  }
+
+  void _onResponse(Response response, ResponseInterceptorHandler handler) {
+    _log.info(
+      '<- ${response.requestOptions.method} ${response.requestOptions.path} ${response.statusCode}',
+    );
+    handler.next(response);
   }
 
   Future<void> _onError(DioException error, ErrorInterceptorHandler handler) async {
     final isUnauthorized = error.response?.statusCode == 401;
     final path = error.requestOptions.path;
     final isExempt = _authRoutesExemptFromRefresh.any(path.endsWith);
+
+    _log.warning(
+      '<- ${error.requestOptions.method} $path ${error.response?.statusCode ?? '(sin respuesta)'}: ${error.message}',
+    );
 
     if (!isUnauthorized || isExempt) {
       handler.next(error);
@@ -67,6 +82,7 @@ class ApiClient {
       final response = await _dio.fetch(retryOptions);
       handler.resolve(response);
     } catch (_) {
+      _log.error('Refresh de sesión fallido tras un 401 en $path; cerrando sesión local');
       await _sessionStorage.clear();
       await onSessionExpired?.call();
       handler.reject(

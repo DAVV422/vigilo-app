@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import '../../core/logging/app_logger.dart';
 import '../../core/network/api_client.dart';
 import '../../core/push/push_notification_service.dart';
 import '../../core/storage/secure_session_storage.dart';
@@ -116,6 +117,8 @@ final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) 
 final authProvider = NotifierProvider<AuthNotifier, User?>(AuthNotifier.new);
 
 class AuthNotifier extends Notifier<User?> {
+  static const _log = AppLogger('Auth');
+
   bool _bootstrapped = false;
 
   @override
@@ -132,25 +135,38 @@ class AuthNotifier extends Notifier<User?> {
   }
 
   /// Best-effort: un fallo al pedir permiso o registrar el token no debe
-  /// impedir que el usuario use la app, así que cualquier error se traga.
+  /// impedir que el usuario use la app, así que cualquier error se traga
+  /// (pero sí queda constancia en el log para poder diagnosticarlo).
   Future<void> _registerPushToken({String? token}) async {
     try {
       final push = ref.read(pushNotificationServiceProvider);
       final resolvedToken = token ?? await push.requestPermissionAndGetToken();
-      if (resolvedToken == null) return;
+      if (resolvedToken == null) {
+        _log.warning('No se obtuvo token push (permiso denegado o sin Play Services)');
+        return;
+      }
       await ref.read(notificationsRepositoryProvider).registerPushToken(
         token: resolvedToken,
         platform: push.platform,
       );
-    } catch (_) {}
+      _log.info('Token push registrado en el backend');
+    } catch (e) {
+      _log.warning('No se pudo registrar el token push: $e');
+    }
   }
 
   Future<void> _restoreSession() async {
     try {
       final repo = ref.read(authRepositoryProvider);
       state = await repo.restoreSession();
-      if (state != null) await _registerPushToken();
-    } catch (_) {
+      if (state != null) {
+        _log.info('Sesión restaurada para el usuario ${state!.id}');
+        await _registerPushToken();
+      } else {
+        _log.info('No había sesión guardada que restaurar');
+      }
+    } catch (e) {
+      _log.warning('Fallo al restaurar sesión: $e');
       state = null;
     }
   }
@@ -160,7 +176,13 @@ class AuthNotifier extends Notifier<User?> {
   /// quien decide qué mostrar, esto solo propaga la excepción.
   Future<void> login(String email, String password) async {
     final repo = ref.read(authRepositoryProvider);
-    state = await repo.login(email: email.trim(), password: password.trim());
+    try {
+      state = await repo.login(email: email.trim(), password: password.trim());
+      _log.info('Login exitoso para el usuario ${state!.id}');
+    } catch (e) {
+      _log.warning('Login fallido para "$email": $e');
+      rethrow;
+    }
     await _registerPushToken();
   }
 
@@ -173,14 +195,20 @@ class AuthNotifier extends Notifier<User?> {
     String? phone,
   }) async {
     final repo = ref.read(authRepositoryProvider);
-    state = await repo.register(
-      email: email.trim(),
-      password: password,
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      username: username.trim(),
-      phone: phone?.trim(),
-    );
+    try {
+      state = await repo.register(
+        email: email.trim(),
+        password: password,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        username: username.trim(),
+        phone: phone?.trim(),
+      );
+      _log.info('Registro exitoso para el usuario ${state!.id}');
+    } catch (e) {
+      _log.warning('Registro fallido para "$email": $e');
+      rethrow;
+    }
     await _registerPushToken();
   }
 
@@ -192,9 +220,13 @@ class AuthNotifier extends Notifier<User?> {
   }
 
   Future<void> logout() async {
+    final userId = state?.id;
     try {
       final pushToken = await ref.read(pushNotificationServiceProvider).getCurrentToken();
       await ref.read(authRepositoryProvider).logout(pushToken: pushToken);
+      _log.info('Logout exitoso para el usuario $userId');
+    } catch (e) {
+      _log.warning('Logout del usuario $userId falló contra el backend (se limpia la sesión local igual): $e');
     } finally {
       state = null;
     }

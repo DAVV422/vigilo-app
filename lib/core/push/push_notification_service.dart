@@ -1,21 +1,20 @@
-import 'dart:developer' as developer;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import '../logging/app_logger.dart';
+
+const _log = AppLogger('Push');
 
 /// Se ejecuta en un isolate aparte cuando llega un push con la app en
 /// background o terminada. No tiene acceso a Riverpod ni a la UI — solo
 /// puede dejar constancia en los logs del dispositivo.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  developer.log(
-    'Push recibido en background: ${message.messageId} (${message.data['type']})',
-    name: 'Push',
-  );
+  _log.info('Push recibido en background: ${message.messageId} (${message.data['type']})');
 }
 
 /// Envoltorio delgado sobre `FirebaseMessaging`. No conoce Riverpod ni
 /// entidades de dominio — eso lo orquesta `AuthNotifier` (registro/baja de
-/// token) y quien escuche `onIncidentTapped` (navegación).
+/// token) y `DashboardScreen` (navegación al tocar una notificación).
 class PushNotificationService {
   final _messaging = FirebaseMessaging.instance;
 
@@ -28,12 +27,12 @@ class PushNotificationService {
     try {
       final settings = await _messaging.requestPermission(alert: true, badge: true, sound: true);
       if (settings.authorizationStatus == AuthorizationStatus.denied) {
-        developer.log('Permiso de notificaciones denegado por el usuario', name: 'Push');
+        _log.warning('Permiso de notificaciones denegado por el usuario');
         return null;
       }
       return await _messaging.getToken();
     } catch (e) {
-      developer.log('No se pudo obtener el token push: $e', name: 'Push', level: 900);
+      _log.error('No se pudo obtener el token push', e);
       return null;
     }
   }
@@ -46,7 +45,7 @@ class PushNotificationService {
     try {
       return await _messaging.getToken();
     } catch (e) {
-      developer.log('No se pudo leer el token push actual: $e', name: 'Push', level: 900);
+      _log.error('No se pudo leer el token push actual', e);
       return null;
     }
   }
