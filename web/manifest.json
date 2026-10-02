@@ -1,6 +1,6 @@
 {
-    "name": "app_mobile",
-    "short_name": "app_mobile",
+    "name": "vigilo",
+    "short_name": "vigilo",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

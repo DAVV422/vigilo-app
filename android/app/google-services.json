@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "166734534157",
+    "project_id": "vigilo-c1484",
+    "storage_bucket": "vigilo-c1484.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:166734534157:android:382b78bae56bc9d8d12744",
+        "android_client_info": {
+          "package_name": "com.vigilo.app.bo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDaOaBSI-6HqbU-WlbXPRu4XJ3gcBNN68s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
