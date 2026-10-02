@@ -1,147 +1,159 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import '../../core/network/api_client.dart';
+import '../../core/storage/secure_session_storage.dart';
 import '../../data/datasources/local_json_datasource.dart';
+import '../../data/datasources/remote/remote_auth_datasource.dart';
+import '../../data/datasources/remote/remote_incident_datasource.dart';
+import '../../data/datasources/remote/remote_recycling_datasource.dart';
+import '../../data/datasources/remote/remote_store_datasource.dart';
 import '../../data/models/company_model.dart';
-import '../../data/repositories/incident_repository_impl.dart';
-import '../../data/repositories/user_repository_impl.dart';
 import '../../data/models/store_product_model.dart';
+import '../../data/repositories/remote_auth_repository_impl.dart';
+import '../../data/repositories/remote_incident_repository_impl.dart';
+import '../../data/repositories/remote_points_repository_impl.dart';
+import '../../data/repositories/remote_recycling_repository_impl.dart';
+import '../../data/repositories/remote_store_repository_impl.dart';
+import '../../data/repositories/user_repository_impl.dart';
 import '../../domain/entities/company.dart';
-import '../../domain/entities/store_product.dart';
 import '../../domain/entities/incident.dart';
+import '../../domain/entities/store_product.dart';
 import '../../domain/entities/user.dart';
+import '../../domain/repositories/auth_repository.dart';
+import '../../domain/repositories/incident_repository.dart';
+import '../../domain/repositories/points_repository.dart';
+import '../../domain/repositories/recycling_repository.dart';
+import '../../domain/repositories/store_repository.dart';
 
 // --- Datasources & Repositories ---
 final localDatasourceProvider = Provider<LocalJsonDatasource>((ref) {
   return LocalJsonDatasource();
 });
 
-final incidentRepositoryProvider = Provider<IncidentRepositoryImpl>((ref) {
-  final ds = ref.watch(localDatasourceProvider);
-  return IncidentRepositoryImpl(ds);
-});
-
+// Mantenido solo para `allUsersProvider` (pantallas que todavía listan el
+// padrón local de usuarios semilla). El flujo de sesión real ya no pasa por
+// aquí — ver authRepositoryProvider.
 final userRepositoryProvider = Provider<UserRepositoryImpl>((ref) {
   final ds = ref.watch(localDatasourceProvider);
   return UserRepositoryImpl(ds);
+});
+
+// --- Infraestructura HTTP / sesión segura ---
+final secureSessionStorageProvider = Provider<SecureSessionStorage>((ref) {
+  return SecureSessionStorage();
+});
+
+final apiClientProvider = Provider<ApiClient>((ref) {
+  final storage = ref.watch(secureSessionStorageProvider);
+  return ApiClient(
+    sessionStorage: storage,
+    onSessionExpired: () async {
+      ref.read(authProvider.notifier).forceLogoutLocally();
+    },
+  );
+});
+
+// --- Repositorios contra el backend real ---
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  final client = ref.watch(apiClientProvider);
+  final storage = ref.watch(secureSessionStorageProvider);
+  return RemoteAuthRepositoryImpl(RemoteAuthDatasource(client), storage);
+});
+
+final incidentRepositoryProvider = Provider<IncidentRepository>((ref) {
+  final client = ref.watch(apiClientProvider);
+  return RemoteIncidentRepositoryImpl(RemoteIncidentDatasource(client));
+});
+
+final pointsRepositoryProvider = Provider<PointsRepository>((ref) {
+  final client = ref.watch(apiClientProvider);
+  return RemotePointsRepositoryImpl(RemoteAuthDatasource(client));
+});
+
+final recyclingRepositoryProvider = Provider<RecyclingRepository>((ref) {
+  final client = ref.watch(apiClientProvider);
+  return RemoteRecyclingRepositoryImpl(RemoteRecyclingDatasource(client));
+});
+
+final storeRepositoryProvider = Provider<StoreRepository>((ref) {
+  final client = ref.watch(apiClientProvider);
+  return RemoteStoreRepositoryImpl(RemoteStoreDatasource(client));
 });
 
 // --- Auth State ---
 final authProvider = NotifierProvider<AuthNotifier, User?>(AuthNotifier.new);
 
 class AuthNotifier extends Notifier<User?> {
+  bool _bootstrapped = false;
+
   @override
   User? build() {
-    _loadSavedUser();
+    if (!_bootstrapped) {
+      _bootstrapped = true;
+      _restoreSession();
+    }
     return null;
   }
 
-  Future<void> _loadSavedUser() async {
+  Future<void> _restoreSession() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedEmail = prefs.getString('userEmail');
-      final savedPassword = prefs.getString('userPassword');
-
-      if (savedEmail != null && savedPassword != null) {
-        final repo = ref.read(userRepositoryProvider);
-        final user = await repo.login(savedEmail, savedPassword);
-        if (user != null) {
-          state = user;
-        } else {
-          state = User(
-            id: 'u1',
-            name: 'Ana',
-            lastName: 'Gómez',
-            username: '@ana_g',
-            phone: '70012345',
-            email: savedEmail,
-            password: savedPassword,
-            avatarUrl: 'A',
-            points: 120,
-            roles: [UserRole.normal],
-          );
-        }
-      }
-    } catch (_) {}
+      final repo = ref.read(authRepositoryProvider);
+      state = await repo.restoreSession();
+    } catch (_) {
+      state = null;
+    }
   }
 
-  Future<bool> login(String email, String password) async {
-    try {
-      final repo = ref.read(userRepositoryProvider);
-      final user = await repo.login(email.trim(), password.trim());
-      if (user != null) {
-        state = user;
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('userEmail', email.trim());
-        await prefs.setString('userPassword', password.trim());
-        return true;
-      }
+  /// Login contra el backend real. A diferencia del mock anterior, un error
+  /// de credenciales SÍ debe tratarse como error — la pantalla de login es
+  /// quien decide qué mostrar, esto solo propaga la excepción.
+  Future<void> login(String email, String password) async {
+    final repo = ref.read(authRepositoryProvider);
+    state = await repo.login(email: email.trim(), password: password.trim());
+  }
 
-      // Si no coincide con la semilla, crear/asociar usuario genérico para que entre siempre
-      final fallbackName = email.trim().contains('@')
-          ? email.trim().split('@').first
-          : (email.trim().isNotEmpty ? email.trim() : 'Usuario');
-
-      final fallbackUser = User(
-        id: 'u_${DateTime.now().millisecondsSinceEpoch}',
-        name: fallbackName.isNotEmpty
-            ? '${fallbackName[0].toUpperCase()}${fallbackName.substring(1)}'
-            : 'Usuario',
-        lastName: 'Vigilo',
-        username: '@${fallbackName.toLowerCase()}',
-        phone: '70012345',
-        email: email.trim().isNotEmpty ? email.trim() : 'usuario@vigilo.com',
-        password: password.trim().isNotEmpty ? password.trim() : '12345678',
-        avatarUrl: fallbackName.isNotEmpty ? fallbackName[0].toUpperCase() : 'U',
-        points: 120,
-        roles: [UserRole.normal],
-      );
-
-      state = fallbackUser;
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('userEmail', fallbackUser.email);
-        await prefs.setString('userPassword', fallbackUser.password);
-      } catch (_) {}
-
-      return true;
-    } catch (e) {
-      // Fallback ante cualquier error de almacenamiento o deserialización
-      state = User(
-        id: 'u1',
-        name: 'Ana',
-        lastName: 'Gómez',
-        username: '@ana_g',
-        phone: '70012345',
-        email: 'ana@vigilo.com',
-        password: '12345678',
-        avatarUrl: 'A',
-        points: 120,
-        roles: [UserRole.normal],
-      );
-      return true;
-    }
+  Future<void> register({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    required String username,
+    String? phone,
+  }) async {
+    final repo = ref.read(authRepositoryProvider);
+    state = await repo.register(
+      email: email.trim(),
+      password: password,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      username: username.trim(),
+      phone: phone?.trim(),
+    );
   }
 
   Future<void> reloadUser() async {
     if (state == null) return;
-    final repo = ref.read(userRepositoryProvider);
-    final users = await repo.getUsers();
-    final updatedUser = users.firstWhere(
-      (u) => u.id == state!.id,
-      orElse: () => state!,
-    );
-    state = updatedUser;
+    final repo = ref.read(authRepositoryProvider);
+    final refreshed = await repo.restoreSession();
+    if (refreshed != null) state = refreshed;
   }
 
   Future<void> logout() async {
+    try {
+      await ref.read(authRepositoryProvider).logout();
+    } finally {
+      state = null;
+    }
+  }
+
+  /// Llamado por [ApiClient] cuando ni el access ni el refresh token sirven
+  /// ya. Solo limpia el estado en memoria — la sesión guardada ya la borró
+  /// el propio ApiClient.
+  void forceLogoutLocally() {
     state = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('userEmail');
-    await prefs.remove('userPassword');
   }
 }
 
@@ -213,46 +225,35 @@ class IncidentsNotifier extends Notifier<List<Incident>> {
     await _initLoad();
   }
 
+  // Nota: el backend real es la única fuente de verdad para los puntos (ver
+  // docs/reglas-negocio.md). Ya no se calculan ni se escriben deltas aquí —
+  // cada acción solo recarga el perfil para reflejar el saldo que el
+  // servidor ya acreditó.
   Future<void> addIncident(Incident incident) async {
     final repo = ref.read(incidentRepositoryProvider);
     await repo.addIncident(incident);
-
-    // Gamificación: +3 puntos por reportar
-    final authNotifier = ref.read(authProvider.notifier);
-    final currentUser = ref.read(authProvider);
-    if (currentUser != null && currentUser.id == incident.reportedByUserId) {
-      final userRepo = ref.read(userRepositoryProvider);
-      final updatedUser = currentUser.copyWith(points: currentUser.points + 3);
-      await userRepo.updateUser(updatedUser);
-      await authNotifier.reloadUser(); // Refrescar UI del Perfil
-    }
-
+    await ref.read(authProvider.notifier).reloadUser();
     await loadIncidents();
   }
 
-  Future<void> validateIncident(String incidentId, String userId) async {
+  Future<void> validateIncident(
+    String incidentId,
+    String userId, {
+    IncidentVote vote = IncidentVote.stillPresent,
+  }) async {
     final repo = ref.read(incidentRepositoryProvider);
-    await repo.validateIncident(incidentId, userId);
-
-    // Gamificación: +1 punto por validar
-    final authNotifier = ref.read(authProvider.notifier);
-    final currentUser = ref.read(authProvider);
-    if (currentUser != null && currentUser.id == userId) {
-      final userRepo = ref.read(userRepositoryProvider);
-      final updatedUser = currentUser.copyWith(points: currentUser.points + 1);
-      await userRepo.updateUser(updatedUser);
-      await authNotifier.reloadUser();
-    }
-
+    await repo.validateIncident(incidentId, userId, vote: vote);
+    await ref.read(authProvider.notifier).reloadUser();
     await loadIncidents();
   }
 
   Future<void> resolveIncident({
     required String incidentId,
     required String userId,
-    required String companyId,
-    required String companyName,
+    String? companyId,
+    String? companyName,
     required String comment,
+    String? resolutionMediaId,
   }) async {
     final repo = ref.read(incidentRepositoryProvider);
     await repo.resolveIncident(
@@ -261,18 +262,9 @@ class IncidentsNotifier extends Notifier<List<Incident>> {
       companyId: companyId,
       companyName: companyName,
       comment: comment,
+      resolutionMediaId: resolutionMediaId,
     );
-
-    // Gamificación: +2 puntos por resolver
-    final authNotifier = ref.read(authProvider.notifier);
-    final currentUser = ref.read(authProvider);
-    if (currentUser != null && currentUser.id == userId) {
-      final userRepo = ref.read(userRepositoryProvider);
-      final updatedUser = currentUser.copyWith(points: currentUser.points + 2);
-      await userRepo.updateUser(updatedUser);
-      await authNotifier.reloadUser();
-    }
-
+    await ref.read(authProvider.notifier).reloadUser();
     await loadIncidents();
   }
 }

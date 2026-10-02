@@ -1,9 +1,11 @@
 // lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/network/api_exception.dart';
 import '../theme/app_colors.dart';
 import '../presentation/providers/providers.dart';
 import 'main_wrapper_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -13,31 +15,29 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final TextEditingController _emailController = TextEditingController(
-    text: 'ana@gmail.com',
-  );
-  final TextEditingController _passwordController = TextEditingController(
-    text: '12345678',
-  );
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
 
   void _login() async {
     if (_isLoading) return;
+    if (_emailController.text.trim().isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ingresa tu correo y contraseña')),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
     try {
-      final success = await ref
-          .read(authProvider.notifier)
-          .login(_emailController.text, _passwordController.text)
-          .timeout(
-            const Duration(seconds: 4),
-            onTimeout: () =>
-                true, // En caso de demora por IO, permitir el acceso
-          );
+      await ref.read(authProvider.notifier).login(
+        _emailController.text,
+        _passwordController.text,
+      );
 
-      if (mounted && success) {
+      if (mounted) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MainWrapperScreen()),
@@ -45,17 +45,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        // Fallback directo a la app
-        Navigator.pushReplacement(
+        final message = e is ApiException
+            ? e.message
+            : 'No se pudo iniciar sesión. Revisa tu conexión e intenta de nuevo.';
+        ScaffoldMessenger.of(
           context,
-          MaterialPageRoute(builder: (context) => const MainWrapperScreen()),
-        );
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  void _goToRegister() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const RegisterScreen()),
+    );
   }
 
   @override
@@ -224,6 +232,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                ),
+                const SizedBox(height: 20),
+                TextButton(
+                  onPressed: _isLoading ? null : _goToRegister,
+                  child: Text(
+                    '¿No tienes cuenta? Regístrate',
+                    style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
+                  ),
                 ),
               ],
             ),
