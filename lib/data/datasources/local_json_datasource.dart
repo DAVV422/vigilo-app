@@ -103,7 +103,10 @@ class LocalJsonDatasource {
         email: 'ana@gmail.com',
         password: '12345678',
         avatarUrl: 'A',
-        points: 120,
+        // 45 = +50 bono de bienvenida +25 recojo de reciclaje -30 canje de
+        // tienda — ver el historial semilla en DemoState.pointsHistory, que
+        // debe cuadrar con este saldo para que la demo no se contradiga.
+        points: 45,
         roles: [UserRole.normal],
       ),
       UserModel(

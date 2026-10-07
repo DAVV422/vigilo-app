@@ -124,13 +124,161 @@ class DemoState {
       ],
       createdAt: DateTime.now().subtract(const Duration(hours: 10)),
     ),
+    // Las siguientes dos ya están COMPLETED (recojo confirmado) para que los
+    // paneles de impacto/KPIs no arranquen en cero en la demo — ver también
+    // `pickups` y `pointsHistory` más abajo, que reflejan el mismo recojo.
+    RecyclingListing(
+      id: 'demo-listing-3',
+      status: 'COMPLETED',
+      address: 'Av. San Martín 450, Barrio Equipetrol',
+      latitude: -17.7810,
+      longitude: -63.1790,
+      isExactLocation: true,
+      notes: 'Botellas PET limpias y compactadas.',
+      citizen: RecyclingListingCitizen(
+        id: 'u1',
+        firstName: 'Ana',
+        lastName: 'Gómez',
+        phone: '70012345',
+        trustScore: 4.8,
+      ),
+      pickupId: 'demo-pickup-1',
+      pickupRecyclerId: 'u7',
+      pickupStatus: 'COMPLETED',
+      materials: [
+        RecyclingListingMaterial(
+          materialId: 'demo-mat-pet',
+          materialName: 'Plástico PET',
+          category: 'PLASTIC',
+          estimatedWeightGrams: 2500,
+        ),
+      ],
+      createdAt: DateTime.now().subtract(const Duration(days: 4)),
+    ),
+    RecyclingListing(
+      id: 'demo-listing-4',
+      status: 'COMPLETED',
+      address: 'Barrio Urbarí, Calle Los Lirios 88',
+      latitude: -17.7735,
+      longitude: -63.1680,
+      isExactLocation: true,
+      notes: 'Latas de aluminio y chatarra liviana.',
+      citizen: RecyclingListingCitizen(
+        id: 'u2',
+        firstName: 'Carlos',
+        lastName: 'Pérez',
+        phone: '70054321',
+        trustScore: 4.5,
+      ),
+      pickupId: 'demo-pickup-2',
+      pickupRecyclerId: 'u6',
+      pickupStatus: 'COMPLETED',
+      materials: [
+        RecyclingListingMaterial(
+          materialId: 'demo-mat-metal',
+          materialName: 'Aluminio y Metales',
+          category: 'METAL',
+          estimatedWeightGrams: 1200,
+        ),
+      ],
+      createdAt: DateTime.now().subtract(const Duration(days: 6)),
+    ),
   ];
 
-  final Map<String, RecyclingPickup> pickups = {};
+  late final Map<String, RecyclingPickup> pickups = {
+    'demo-pickup-1': RecyclingPickup(
+      id: 'demo-pickup-1',
+      status: 'COMPLETED',
+      claimedAt: DateTime.now().subtract(const Duration(days: 4, hours: 3)),
+      arrivedAt: DateTime.now().subtract(const Duration(days: 4, hours: 1)),
+      completedAt: DateTime.now().subtract(const Duration(days: 4)),
+      listingId: 'demo-listing-3',
+      listingAddress: 'Av. San Martín 450, Barrio Equipetrol',
+      citizenId: 'u1',
+      citizenName: 'Ana Gómez',
+      citizenPhone: '70012345',
+      citizenTrustScore: 4.8,
+      results: [
+        RecyclingPickupResult(
+          materialId: 'demo-mat-pet',
+          materialName: 'Plástico PET',
+          actualWeightGrams: 2500,
+          pointsAwarded: 25,
+        ),
+      ],
+      compensation: PickupCompensation(
+        id: 'demo-compensation-1',
+        paymentMethod: 'CASH',
+        grossAmount: 3.0,
+        status: 'CONFIRMED',
+      ),
+    ),
+    'demo-pickup-2': RecyclingPickup(
+      id: 'demo-pickup-2',
+      status: 'COMPLETED',
+      claimedAt: DateTime.now().subtract(const Duration(days: 6, hours: 3)),
+      arrivedAt: DateTime.now().subtract(const Duration(days: 6, hours: 1)),
+      completedAt: DateTime.now().subtract(const Duration(days: 6)),
+      listingId: 'demo-listing-4',
+      listingAddress: 'Barrio Urbarí, Calle Los Lirios 88',
+      citizenId: 'u2',
+      citizenName: 'Carlos Pérez',
+      citizenPhone: '70054321',
+      citizenTrustScore: 4.5,
+      results: [
+        RecyclingPickupResult(
+          materialId: 'demo-mat-metal',
+          materialName: 'Aluminio y Metales',
+          actualWeightGrams: 1200,
+          pointsAwarded: 30,
+        ),
+      ],
+      compensation: PickupCompensation(
+        id: 'demo-compensation-2',
+        paymentMethod: 'CASH',
+        grossAmount: 5.4,
+        status: 'CONFIRMED',
+      ),
+    ),
+  };
 
-  final List<Redemption> redemptions = [];
+  late final List<Redemption> redemptions = [
+    Redemption(
+      id: 'demo-redemption-1',
+      productId: 'p3',
+      productName: 'Bolsa Reutilizable',
+      productImageUrl: 'https://cdn-icons-png.flaticon.com/512/4293/4293035.png',
+      pointsSpent: 30,
+      code: 'ECO3K9',
+      status: 'FULFILLED',
+      createdAt: DateTime.now().subtract(const Duration(days: 1)),
+      fulfilledAt: DateTime.now().subtract(const Duration(hours: 20)),
+    ),
+  ];
 
+  /// Historial de la cuenta demo principal (Ana, u1 — ver el acceso rápido
+  /// en la pantalla de login). Coincide con su saldo semilla (45 pts en
+  /// `LocalJsonDatasource`): +50 bono, +25 por el recojo PET de arriba,
+  /// -30 por el canje de la bolsa reutilizable.
   late final List<PointsTransactionEntry> pointsHistory = [
+    PointsTransactionEntry(
+      id: 'demo-tx-3',
+      delta: -30,
+      reason: 'Canje: Bolsa Reutilizable',
+      referenceType: 'STORE_REDEMPTION',
+      referenceId: 'p3',
+      balanceAfter: 45,
+      createdAt: DateTime.now().subtract(const Duration(days: 1)),
+    ),
+    PointsTransactionEntry(
+      id: 'demo-tx-2',
+      delta: 25,
+      reason: 'Recojo de reciclaje confirmado',
+      referenceType: 'RECYCLING_PICKUP',
+      referenceId: 'demo-pickup-1',
+      balanceAfter: 75,
+      createdAt: DateTime.now().subtract(const Duration(days: 4)),
+    ),
     PointsTransactionEntry(
       id: 'demo-tx-1',
       delta: 50,
@@ -138,7 +286,7 @@ class DemoState {
       referenceType: 'WELCOME_BONUS',
       referenceId: 'welcome',
       balanceAfter: 50,
-      createdAt: DateTime.now().subtract(const Duration(days: 2)),
+      createdAt: DateTime.now().subtract(const Duration(days: 5)),
     ),
   ];
 

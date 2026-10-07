@@ -81,8 +81,14 @@ class DemoAnalyticsRepositoryImpl implements AnalyticsRepository {
       }
     }
 
-    final pointsIssued = _state.pointsHistory.where((t) => t.delta > 0).fold<int>(0, (s, t) => s + t.delta);
-    final pointsRedeemed = _state.pointsHistory.where((t) => t.delta < 0).fold<int>(0, (s, t) => s - t.delta);
+    // A nivel plataforma no alcanza con el historial de puntos del usuario
+    // logueado (solo refleja "sus" movimientos) — se suma directo desde los
+    // recojos confirmados y los canjes, sin importar de quién son.
+    final pointsIssued = _state.pickups.values
+        .where((p) => p.status == 'COMPLETED')
+        .expand((p) => p.results)
+        .fold<int>(0, (s, r) => s + r.pointsAwarded);
+    final pointsRedeemed = _state.redemptions.fold<int>(0, (s, r) => s + r.pointsSpent);
 
     final totalListings = _state.listings.length;
     final retrievalRate = totalListings > 0 ? (completedListings.length / totalListings) * 100 : 0.0;
