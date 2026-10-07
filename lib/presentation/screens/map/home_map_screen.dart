@@ -943,49 +943,22 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
           child: Column(
             children: [
               // 2. Cabecera (Header)
+              // Sin logo/slogan acá: la marca ya la muestra MainAppBar justo
+              // arriba y la identidad del usuario ya la muestra el pie de
+              // este mismo panel (más abajo) — repetir ambas cosas en el
+              // header solo sumaba ruido visual sin aportar nada nuevo.
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 16, 20),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.asset('assets/app_icon.jpg', fit: BoxFit.cover),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'VIGILO',
-                              style: TextStyle(
-                                color: AppColors.onBackground,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.2,
-                              ),
-                            ),
-                            Text(
-                              'Tu ciudad, tu guardia',
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                    const Text(
+                      'Menú',
+                      style: TextStyle(
+                        color: AppColors.onBackground,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     InkWell(
                       onTap: () {
