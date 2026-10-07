@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import '../../core/config/app_config.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/network/api_client.dart';
 import '../../core/push/push_notification_service.dart';
@@ -15,8 +16,17 @@ import '../../data/datasources/remote/remote_media_datasource.dart';
 import '../../data/datasources/remote/remote_notifications_datasource.dart';
 import '../../data/datasources/remote/remote_recycling_datasource.dart';
 import '../../data/datasources/remote/remote_store_datasource.dart';
+import '../../data/demo/demo_state.dart';
 import '../../data/models/company_model.dart';
 import '../../data/models/store_product_model.dart';
+import '../../data/repositories/demo_analytics_repository_impl.dart';
+import '../../data/repositories/demo_auth_repository_impl.dart';
+import '../../data/repositories/demo_media_repository_impl.dart';
+import '../../data/repositories/demo_notifications_repository_impl.dart';
+import '../../data/repositories/demo_points_repository_impl.dart';
+import '../../data/repositories/demo_recycling_repository_impl.dart';
+import '../../data/repositories/demo_store_repository_impl.dart';
+import '../../data/repositories/incident_repository_impl.dart';
 import '../../data/repositories/remote_analytics_repository_impl.dart';
 import '../../data/repositories/remote_auth_repository_impl.dart';
 import '../../data/repositories/remote_incident_repository_impl.dart';
@@ -67,44 +77,76 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   );
 });
 
-// --- Repositorios contra el backend real ---
+// --- Estado compartido del modo demo (ver AppConfig.demoMode) ---
+// Un solo Provider (no autoDispose) para que todos los repos demo lean y
+// muten el mismo estado en memoria durante toda la vida de la app.
+final demoStateProvider = Provider<DemoState>((ref) => DemoState());
+
+// --- Repositorios: backend real, o modo demo 100% local según AppConfig.demoMode ---
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  if (AppConfig.demoMode) {
+    final ds = ref.watch(localDatasourceProvider);
+    return DemoAuthRepositoryImpl(ds, ref.watch(demoStateProvider));
+  }
   final client = ref.watch(apiClientProvider);
   final storage = ref.watch(secureSessionStorageProvider);
   return RemoteAuthRepositoryImpl(RemoteAuthDatasource(client), storage);
 });
 
 final incidentRepositoryProvider = Provider<IncidentRepository>((ref) {
+  if (AppConfig.demoMode) {
+    return IncidentRepositoryImpl(ref.watch(localDatasourceProvider));
+  }
   final client = ref.watch(apiClientProvider);
   return RemoteIncidentRepositoryImpl(RemoteIncidentDatasource(client));
 });
 
 final pointsRepositoryProvider = Provider<PointsRepository>((ref) {
+  if (AppConfig.demoMode) {
+    return DemoPointsRepositoryImpl(ref.watch(demoStateProvider));
+  }
   final client = ref.watch(apiClientProvider);
   return RemotePointsRepositoryImpl(RemoteAuthDatasource(client));
 });
 
 final recyclingRepositoryProvider = Provider<RecyclingRepository>((ref) {
+  if (AppConfig.demoMode) {
+    return DemoRecyclingRepositoryImpl(ref.watch(demoStateProvider));
+  }
   final client = ref.watch(apiClientProvider);
   return RemoteRecyclingRepositoryImpl(RemoteRecyclingDatasource(client));
 });
 
 final mediaRepositoryProvider = Provider<MediaRepository>((ref) {
+  if (AppConfig.demoMode) {
+    return DemoMediaRepositoryImpl();
+  }
   final client = ref.watch(apiClientProvider);
   return RemoteMediaRepositoryImpl(RemoteMediaDatasource(client));
 });
 
 final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
+  if (AppConfig.demoMode) {
+    final ds = ref.watch(localDatasourceProvider);
+    return DemoAnalyticsRepositoryImpl(ds, ref.watch(demoStateProvider));
+  }
   final client = ref.watch(apiClientProvider);
   return RemoteAnalyticsRepositoryImpl(RemoteAnalyticsDatasource(client));
 });
 
 final storeRepositoryProvider = Provider<StoreRepository>((ref) {
+  if (AppConfig.demoMode) {
+    final ds = ref.watch(localDatasourceProvider);
+    return DemoStoreRepositoryImpl(ds, ref.watch(demoStateProvider));
+  }
   final client = ref.watch(apiClientProvider);
   return RemoteStoreRepositoryImpl(RemoteStoreDatasource(client));
 });
 
 final notificationsRepositoryProvider = Provider<NotificationsRepository>((ref) {
+  if (AppConfig.demoMode) {
+    return DemoNotificationsRepositoryImpl(ref.watch(demoStateProvider));
+  }
   final client = ref.watch(apiClientProvider);
   return RemoteNotificationsRepositoryImpl(RemoteNotificationsDatasource(client));
 });
@@ -126,10 +168,14 @@ class AuthNotifier extends Notifier<User?> {
     if (!_bootstrapped) {
       _bootstrapped = true;
       _restoreSession();
-      final sub = ref.read(pushNotificationServiceProvider).onTokenRefresh.listen((token) {
-        if (state != null) _registerPushToken(token: token);
-      });
-      ref.onDispose(sub.cancel);
+      // En modo demo no hay backend al que registrar un token, y evitamos
+      // tocar Firebase del todo (ver main.dart) — nada que escuchar acá.
+      if (!AppConfig.demoMode) {
+        final sub = ref.read(pushNotificationServiceProvider).onTokenRefresh.listen((token) {
+          if (state != null) _registerPushToken(token: token);
+        });
+        ref.onDispose(sub.cancel);
+      }
     }
     return null;
   }
@@ -138,6 +184,7 @@ class AuthNotifier extends Notifier<User?> {
   /// impedir que el usuario use la app, así que cualquier error se traga
   /// (pero sí queda constancia en el log para poder diagnosticarlo).
   Future<void> _registerPushToken({String? token}) async {
+    if (AppConfig.demoMode) return;
     try {
       final push = ref.read(pushNotificationServiceProvider);
       final resolvedToken = token ?? await push.requestPermissionAndGetToken();
@@ -222,7 +269,9 @@ class AuthNotifier extends Notifier<User?> {
   Future<void> logout() async {
     final userId = state?.id;
     try {
-      final pushToken = await ref.read(pushNotificationServiceProvider).getCurrentToken();
+      final pushToken = AppConfig.demoMode
+          ? null
+          : await ref.read(pushNotificationServiceProvider).getCurrentToken();
       await ref.read(authRepositoryProvider).logout(pushToken: pushToken);
       _log.info('Logout exitoso para el usuario $userId');
     } catch (e) {

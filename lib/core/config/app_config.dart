@@ -17,4 +17,11 @@ class AppConfig {
 
   static const Duration connectTimeout = Duration(seconds: 10);
   static const Duration receiveTimeout = Duration(seconds: 15);
+
+  /// Modo demo: la app funciona 100% local (datos semilla en memoria/disco,
+  /// sin backend ni Firebase) para poder hacer una presentación rápida sin
+  /// depender de infraestructura. Para activarlo sin tocar código:
+  /// `flutter run --dart-define=DEMO_MODE=true`. También se puede cambiar
+  /// `defaultValue` a `true` acá mismo si se va a generar un APK de demo.
+  static const bool demoMode = bool.fromEnvironment('DEMO_MODE', defaultValue: false);
 }

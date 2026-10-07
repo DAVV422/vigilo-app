@@ -1,6 +1,7 @@
 // lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/config/app_config.dart';
 import '../core/network/api_exception.dart';
 import '../theme/app_colors.dart';
 import '../presentation/providers/providers.dart';
@@ -171,6 +172,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
                   ),
                 ),
+                if (AppConfig.demoMode) ...[
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: _isLoading
+                        ? null
+                        : () {
+                            _emailController.text = 'ana@gmail.com';
+                            _passwordController.text = '12345678';
+                          },
+                    child: Text(
+                      'Modo demo: usar cuenta de prueba (ana@gmail.com)',
+                      style: TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
