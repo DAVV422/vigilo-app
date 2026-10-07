@@ -55,6 +55,15 @@ class RemoteRecyclingDatasource {
     }
   }
 
+  Future<List<dynamic>> getMine() async {
+    try {
+      final res = await _client.raw.get('/recycling/listings/mine');
+      return res.data['data'] as List<dynamic>;
+    } on DioException catch (e) {
+      throw _client.toApiException(e);
+    }
+  }
+
   Future<Map<String, dynamic>> claim(String listingId) async {
     try {
       final res = await _client.raw.post('/recycling/listings/$listingId/claim');
@@ -79,6 +88,15 @@ class RemoteRecyclingDatasource {
         queryParameters: {if (filter != null) 'filter': filter},
       );
       return res.data['data'] as List<dynamic>;
+    } on DioException catch (e) {
+      throw _client.toApiException(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> getPickupById(String id) async {
+    try {
+      final res = await _client.raw.get('/recycling/pickups/$id');
+      return res.data['data'] as Map<String, dynamic>;
     } on DioException catch (e) {
       throw _client.toApiException(e);
     }

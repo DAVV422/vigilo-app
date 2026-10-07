@@ -65,6 +65,12 @@ class RemoteRecyclingRepositoryImpl implements RecyclingRepository {
   }
 
   @override
+  Future<List<RecyclingListing>> getMyListings() async {
+    final raw = await _datasource.getMine();
+    return raw.map((json) => RecyclingListing.fromJson(json as Map<String, dynamic>)).toList();
+  }
+
+  @override
   Future<RecyclingListing> claimListing(String listingId) async {
     final json = await _datasource.claim(listingId);
     return RecyclingListing.fromJson(json);
@@ -77,6 +83,12 @@ class RemoteRecyclingRepositoryImpl implements RecyclingRepository {
   Future<List<RecyclingPickup>> getMyPickups({String? filter}) async {
     final raw = await _datasource.getMyPickups(filter: filter);
     return raw.map((json) => RecyclingPickup.fromJson(json as Map<String, dynamic>)).toList();
+  }
+
+  @override
+  Future<RecyclingPickup> getPickupById(String pickupId) async {
+    final json = await _datasource.getPickupById(pickupId);
+    return RecyclingPickup.fromJson(json);
   }
 
   @override

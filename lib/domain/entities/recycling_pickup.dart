@@ -1,3 +1,5 @@
+import 'recycling_listing.dart' show RecyclingListingMaterial;
+
 class RecyclingPickupResult {
   final String materialId;
   final String? materialName;
@@ -65,6 +67,9 @@ class RecyclingPickup {
   final double? citizenTrustScore;
   final List<RecyclingPickupResult> results;
   final PickupCompensation? compensation;
+  /// Materiales/pesos *estimados* por el ciudadano al publicar — es la
+  /// referencia que el recolector usa para saber qué pesar al completar.
+  final List<RecyclingListingMaterial> listingMaterials;
 
   RecyclingPickup({
     required this.id,
@@ -83,6 +88,7 @@ class RecyclingPickup {
     this.citizenTrustScore,
     this.results = const [],
     this.compensation,
+    this.listingMaterials = const [],
   });
 
   factory RecyclingPickup.fromJson(Map<String, dynamic> json) {
@@ -109,6 +115,9 @@ class RecyclingPickup {
       compensation: json['compensation'] != null
           ? PickupCompensation.fromJson(json['compensation'] as Map<String, dynamic>)
           : null,
+      listingMaterials: ((listing?['materials'] as List<dynamic>?) ?? [])
+          .map((m) => RecyclingListingMaterial.fromJson(m as Map<String, dynamic>))
+          .toList(),
     );
   }
 }

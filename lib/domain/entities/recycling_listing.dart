@@ -92,6 +92,10 @@ class RecyclingListing {
   final String? pickupId;
   final String? pickupRecyclerId;
   final String? pickupStatus;
+  /// Estado de la compensación del recojo asociado (PENDING_CONFIRMATION |
+  /// CONFIRMED | DISPUTED). Solo viene poblado en `getMyListings()` — es lo
+  /// que le dice al ciudadano si todavía debe confirmar o disputar.
+  final String? pickupCompensationStatus;
   final List<RecyclingListingMaterial> materials;
   final List<RecyclingAvailabilityWindow> availabilityWindows;
   final DateTime createdAt;
@@ -110,6 +114,7 @@ class RecyclingListing {
     this.pickupId,
     this.pickupRecyclerId,
     this.pickupStatus,
+    this.pickupCompensationStatus,
     this.materials = const [],
     this.availabilityWindows = const [],
     required this.createdAt,
@@ -133,6 +138,7 @@ class RecyclingListing {
       pickupId: pickup?['id'] as String?,
       pickupRecyclerId: pickup?['recyclerId'] as String?,
       pickupStatus: pickup?['status'] as String?,
+      pickupCompensationStatus: pickup?['compensationStatus'] as String?,
       materials: ((json['materials'] as List<dynamic>?) ?? [])
           .map((m) => RecyclingListingMaterial.fromJson(m as Map<String, dynamic>))
           .toList(),

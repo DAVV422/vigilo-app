@@ -22,6 +22,7 @@ import '../alerts/confirm_alerts_screen.dart';
 import '../../../screens/kpi_screen.dart';
 import '../../../screens/impact_screen.dart';
 import '../../../screens/collections_screen.dart';
+import '../recycling/my_listings_screen.dart';
 import '../../widgets/map/map_alert_summary_sheet.dart';
 import '../../../widgets/main_app_bar.dart';
 import '../../../theme/app_icons.dart';
@@ -1044,6 +1045,16 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                       Future.delayed(const Duration(milliseconds: 250), () {
                         if (mounted) {
                           Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionsScreen()));
+                        }
+                      });
+                    }),
+                    _buildDrawerItem(Icons.inventory_2_outlined, 'Mis Publicaciones', () {
+                      setState(() {
+                        _isSidebarOpen = false;
+                      });
+                      Future.delayed(const Duration(milliseconds: 250), () {
+                        if (mounted) {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const MyListingsScreen()));
                         }
                       });
                     }),

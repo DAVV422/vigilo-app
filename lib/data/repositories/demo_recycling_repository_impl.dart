@@ -2,6 +2,7 @@ import 'package:collection/collection.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/network/api_exception.dart';
+import '../../domain/entities/app_notification.dart';
 import '../../domain/entities/material_type.dart';
 import '../../domain/entities/recycling_listing.dart';
 import '../../domain/entities/recycling_pickup.dart';
@@ -109,6 +110,17 @@ class DemoRecyclingRepositoryImpl implements RecyclingRepository {
   Future<RecyclingListing> getListingById(String id) async => _findListing(id);
 
   @override
+  Future<List<RecyclingListing>> getMyListings() async {
+    final userId = _currentUserId;
+    final mine = _state.listings.where((l) => l.citizen?.id == userId).toList();
+    mine.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return mine;
+  }
+
+  @override
+  Future<RecyclingPickup> getPickupById(String pickupId) async => _findPickup(pickupId);
+
+  @override
   Future<RecyclingListing> claimListing(String listingId) async {
     final listing = _findListing(listingId);
     if (listing.status != 'PENDING') {
@@ -128,26 +140,16 @@ class DemoRecyclingRepositoryImpl implements RecyclingRepository {
       citizenName: '${listing.citizen?.firstName ?? ''} ${listing.citizen?.lastName ?? ''}'.trim(),
       citizenPhone: listing.citizen?.phone,
       citizenTrustScore: listing.citizen?.trustScore,
+      listingMaterials: listing.materials,
     );
     _state.pickups[pickup.id] = pickup;
 
-    final updatedListing = RecyclingListing(
-      id: listing.id,
+    final updatedListing = _copyListing(
+      listing,
       status: 'CLAIMED',
-      address: listing.address,
-      approximateAddress: listing.approximateAddress,
-      latitude: listing.latitude,
-      longitude: listing.longitude,
-      isExactLocation: listing.isExactLocation,
-      notes: listing.notes,
-      photoMediaId: listing.photoMediaId,
-      citizen: listing.citizen,
       pickupId: pickup.id,
       pickupRecyclerId: _currentUserId,
       pickupStatus: pickup.status,
-      materials: listing.materials,
-      availabilityWindows: listing.availabilityWindows,
-      createdAt: listing.createdAt,
     );
     _replaceListing(updatedListing);
     _log.info('Publicación demo reclamada: $listingId por $_currentUserId');
@@ -160,13 +162,20 @@ class DemoRecyclingRepositoryImpl implements RecyclingRepository {
     if (listing.citizen?.id != _currentUserId) {
       throw ApiException(statusCode: 403, message: 'No puedes cancelar una publicación que no es tuya.');
     }
-    _replaceListing(_withListingStatus(listing, 'CANCELLED'));
+    _replaceListing(_copyListing(listing, status: 'CANCELLED'));
   }
 
-  RecyclingListing _withListingStatus(RecyclingListing listing, String status) {
+  RecyclingListing _copyListing(
+    RecyclingListing listing, {
+    String? status,
+    Object? pickupId = _unset,
+    Object? pickupRecyclerId = _unset,
+    Object? pickupStatus = _unset,
+    Object? pickupCompensationStatus = _unset,
+  }) {
     return RecyclingListing(
       id: listing.id,
-      status: status,
+      status: status ?? listing.status,
       address: listing.address,
       approximateAddress: listing.approximateAddress,
       latitude: listing.latitude,
@@ -175,9 +184,12 @@ class DemoRecyclingRepositoryImpl implements RecyclingRepository {
       notes: listing.notes,
       photoMediaId: listing.photoMediaId,
       citizen: listing.citizen,
-      pickupId: listing.pickupId,
-      pickupRecyclerId: listing.pickupRecyclerId,
-      pickupStatus: listing.pickupStatus,
+      pickupId: pickupId == _unset ? listing.pickupId : pickupId as String?,
+      pickupRecyclerId: pickupRecyclerId == _unset ? listing.pickupRecyclerId : pickupRecyclerId as String?,
+      pickupStatus: pickupStatus == _unset ? listing.pickupStatus : pickupStatus as String?,
+      pickupCompensationStatus: pickupCompensationStatus == _unset
+          ? listing.pickupCompensationStatus
+          : pickupCompensationStatus as String?,
       materials: listing.materials,
       availabilityWindows: listing.availabilityWindows,
       createdAt: listing.createdAt,
@@ -215,17 +227,28 @@ class DemoRecyclingRepositoryImpl implements RecyclingRepository {
       citizenTrustScore: pickup.citizenTrustScore,
       results: pickup.results,
       compensation: pickup.compensation,
+      listingMaterials: pickup.listingMaterials,
     );
   }
 
   @override
   Future<void> markEnRoute(String pickupId) async {
-    _state.pickups[pickupId] = _withPickupStatus(_findPickup(pickupId), 'EN_ROUTE');
+    final pickup = _findPickup(pickupId);
+    _state.pickups[pickupId] = _withPickupStatus(pickup, 'EN_ROUTE');
+    _updateLinkedListingPickupStatus(pickup.listingId, 'EN_ROUTE');
   }
 
   @override
   Future<void> markArrived(String pickupId) async {
-    _state.pickups[pickupId] = _withPickupStatus(_findPickup(pickupId), 'ARRIVED', arrivedAt: DateTime.now());
+    final pickup = _findPickup(pickupId);
+    _state.pickups[pickupId] = _withPickupStatus(pickup, 'ARRIVED', arrivedAt: DateTime.now());
+    _updateLinkedListingPickupStatus(pickup.listingId, 'ARRIVED');
+  }
+
+  void _updateLinkedListingPickupStatus(String? listingId, String pickupStatus) {
+    if (listingId == null) return;
+    final listing = _state.listings.where((l) => l.id == listingId).firstOrNull;
+    if (listing != null) _replaceListing(_copyListing(listing, pickupStatus: pickupStatus));
   }
 
   @override
@@ -234,7 +257,15 @@ class DemoRecyclingRepositoryImpl implements RecyclingRepository {
     _state.pickups[pickupId] = _withPickupStatus(pickup, 'CANCELLED');
     if (pickup.listingId != null) {
       final listing = _state.listings.where((l) => l.id == pickup.listingId).firstOrNull;
-      if (listing != null) _replaceListing(_withListingStatus(listing, 'PENDING'));
+      if (listing != null) {
+        _replaceListing(_copyListing(
+          listing,
+          status: 'PENDING',
+          pickupId: null,
+          pickupRecyclerId: null,
+          pickupStatus: null,
+        ));
+      }
     }
   }
 
@@ -285,12 +316,36 @@ class DemoRecyclingRepositoryImpl implements RecyclingRepository {
       citizenTrustScore: pickup.citizenTrustScore,
       results: pickupResults,
       compensation: compensation,
+      listingMaterials: pickup.listingMaterials,
     );
     _state.pickups[pickupId] = completed;
 
     if (pickup.listingId != null) {
       final listing = _state.listings.where((l) => l.id == pickup.listingId).firstOrNull;
-      if (listing != null) _replaceListing(_withListingStatus(listing, 'COMPLETED'));
+      if (listing != null) {
+        _replaceListing(_copyListing(
+          listing,
+          status: 'COMPLETED',
+          pickupStatus: 'COMPLETED',
+          pickupCompensationStatus: 'PENDING_CONFIRMATION',
+        ));
+      }
+    }
+
+    if (pickup.citizenId != null) {
+      _state.notifications.insert(
+        0,
+        AppNotification(
+          id: _state.newId('demo-notif'),
+          type: 'PICKUP_PENDING_CONFIRMATION',
+          title: 'Pesaje registrado, confirma tu recojo',
+          body: 'El recolector registró el pesaje de tu material (+$totalPoints puntos estimados). '
+              'Revisa el detalle en "Mis publicaciones" y confirma o disputa el recojo.',
+          data: {'pickupId': pickupId, 'totalPointsCalculated': totalPoints},
+          isRead: false,
+          createdAt: DateTime.now(),
+        ),
+      );
     }
 
     return CompletePickupResult(
@@ -314,8 +369,20 @@ class DemoRecyclingRepositoryImpl implements RecyclingRepository {
       referenceId: pickupId,
     );
 
+    _setCompensationStatus(pickup, 'CONFIRMED');
+
+    return (pointsAwarded: totalPoints, newPointsBalance: _state.currentUser?.points ?? 0);
+  }
+
+  @override
+  Future<void> disputePickup({required String pickupId, required String reason}) async {
+    final pickup = _findPickup(pickupId);
+    _setCompensationStatus(pickup, 'DISPUTED');
+  }
+
+  void _setCompensationStatus(RecyclingPickup pickup, String status) {
     if (pickup.compensation != null) {
-      _state.pickups[pickupId] = RecyclingPickup(
+      _state.pickups[pickup.id] = RecyclingPickup(
         id: pickup.id,
         status: pickup.status,
         claimedAt: pickup.claimedAt,
@@ -329,44 +396,27 @@ class DemoRecyclingRepositoryImpl implements RecyclingRepository {
         citizenPhone: pickup.citizenPhone,
         citizenTrustScore: pickup.citizenTrustScore,
         results: pickup.results,
+        listingMaterials: pickup.listingMaterials,
         compensation: PickupCompensation(
           id: pickup.compensation!.id,
           paymentMethod: pickup.compensation!.paymentMethod,
           grossAmount: pickup.compensation!.grossAmount,
           voucherMediaId: pickup.compensation!.voucherMediaId,
-          status: 'CONFIRMED',
+          status: status,
         ),
       );
     }
 
-    return (pointsAwarded: totalPoints, newPointsBalance: _state.currentUser?.points ?? 0);
-  }
-
-  @override
-  Future<void> disputePickup({required String pickupId, required String reason}) async {
-    final pickup = _findPickup(pickupId);
-    if (pickup.compensation == null) return;
-    _state.pickups[pickupId] = RecyclingPickup(
-      id: pickup.id,
-      status: pickup.status,
-      claimedAt: pickup.claimedAt,
-      arrivedAt: pickup.arrivedAt,
-      completedAt: pickup.completedAt,
-      notes: pickup.notes,
-      listingId: pickup.listingId,
-      listingAddress: pickup.listingAddress,
-      citizenId: pickup.citizenId,
-      citizenName: pickup.citizenName,
-      citizenPhone: pickup.citizenPhone,
-      citizenTrustScore: pickup.citizenTrustScore,
-      results: pickup.results,
-      compensation: PickupCompensation(
-        id: pickup.compensation!.id,
-        paymentMethod: pickup.compensation!.paymentMethod,
-        grossAmount: pickup.compensation!.grossAmount,
-        voucherMediaId: pickup.compensation!.voucherMediaId,
-        status: 'DISPUTED',
-      ),
-    );
+    if (pickup.listingId != null) {
+      final listing = _state.listings.where((l) => l.id == pickup.listingId).firstOrNull;
+      if (listing != null) {
+        _replaceListing(_copyListing(listing, pickupCompensationStatus: status));
+      }
+    }
   }
 }
+
+/// Centinela para distinguir "no pasaron este parámetro" de "lo pasaron
+/// explícitamente como null" en `_copyListing` (todos sus campos opcionales
+/// son nullable de por sí).
+const Object _unset = Object();

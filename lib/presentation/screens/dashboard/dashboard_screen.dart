@@ -11,6 +11,7 @@ import '../../../theme/app_icons.dart';
 import '../alerts/alerts_screen.dart';
 import '../map/home_map_screen.dart';
 import '../profile/profile_screen.dart';
+import '../recycling/pickup_confirmation_screen.dart';
 import '../store/store_screen.dart';
 import '../../providers/providers.dart';
 
@@ -64,6 +65,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Future<void> _handleNotificationTap(RemoteMessage message) async {
     _log.info('Notificación push tocada: ${message.data}');
+
+    final pickupId = message.data['pickupId'] as String?;
+    if (message.data['type'] == 'PICKUP_PENDING_CONFIRMATION' && pickupId != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => PickupConfirmationScreen(pickupId: pickupId)),
+      );
+      return;
+    }
+
     final incidentId = message.data['incidentId'] as String?;
     if (incidentId == null) {
       ref.read(currentNavIndexProvider.notifier).goToAlerts();

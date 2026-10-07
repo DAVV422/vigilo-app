@@ -40,11 +40,18 @@ abstract class RecyclingRepository {
 
   Future<RecyclingListing> getListingById(String id);
 
+  /// Publicaciones propias del ciudadano (cualquier estado) — es la única
+  /// forma de ubicar cuáles ya están `COMPLETED` y esperando su
+  /// confirmación, sin depender únicamente de la notificación push.
+  Future<List<RecyclingListing>> getMyListings();
+
   Future<RecyclingListing> claimListing(String listingId);
 
   Future<void> cancelListing(String listingId);
 
   Future<List<RecyclingPickup>> getMyPickups({String? filter});
+
+  Future<RecyclingPickup> getPickupById(String pickupId);
 
   Future<void> markEnRoute(String pickupId);
 

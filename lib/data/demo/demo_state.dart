@@ -124,6 +124,34 @@ class DemoState {
       ],
       createdAt: DateTime.now().subtract(const Duration(hours: 10)),
     ),
+    RecyclingListing(
+      id: 'demo-listing-5',
+      status: 'PENDING',
+      address: 'Barrio Urbarí, Av. Beni 230',
+      latitude: -17.7750,
+      longitude: -63.1700,
+      isExactLocation: true,
+      notes: 'Botellas de vidrio separadas por color.',
+      citizen: RecyclingListingCitizen(
+        id: 'u2',
+        firstName: 'Carlos',
+        lastName: 'Pérez',
+        phone: '70054321',
+        trustScore: 4.5,
+      ),
+      materials: [
+        RecyclingListingMaterial(
+          materialId: 'demo-mat-glass',
+          materialName: 'Vidrio',
+          category: 'GLASS',
+          estimatedWeightGrams: 4000,
+        ),
+      ],
+      availabilityWindows: [
+        RecyclingAvailabilityWindow(dayOfWeek: DateTime.now().weekday % 7, startTime: '10:00:00', endTime: '14:00:00'),
+      ],
+      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+    ),
     // Las siguientes dos ya están COMPLETED (recojo confirmado) para que los
     // paneles de impacto/KPIs no arranquen en cero en la demo — ver también
     // `pickups` y `pointsHistory` más abajo, que reflejan el mismo recojo.
@@ -145,6 +173,7 @@ class DemoState {
       pickupId: 'demo-pickup-1',
       pickupRecyclerId: 'u7',
       pickupStatus: 'COMPLETED',
+      pickupCompensationStatus: 'CONFIRMED',
       materials: [
         RecyclingListingMaterial(
           materialId: 'demo-mat-pet',
@@ -173,6 +202,7 @@ class DemoState {
       pickupId: 'demo-pickup-2',
       pickupRecyclerId: 'u6',
       pickupStatus: 'COMPLETED',
+      pickupCompensationStatus: 'CONFIRMED',
       materials: [
         RecyclingListingMaterial(
           materialId: 'demo-mat-metal',
@@ -212,6 +242,14 @@ class DemoState {
         grossAmount: 3.0,
         status: 'CONFIRMED',
       ),
+      listingMaterials: [
+        RecyclingListingMaterial(
+          materialId: 'demo-mat-pet',
+          materialName: 'Plástico PET',
+          category: 'PLASTIC',
+          estimatedWeightGrams: 2500,
+        ),
+      ],
     ),
     'demo-pickup-2': RecyclingPickup(
       id: 'demo-pickup-2',
@@ -239,6 +277,14 @@ class DemoState {
         grossAmount: 5.4,
         status: 'CONFIRMED',
       ),
+      listingMaterials: [
+        RecyclingListingMaterial(
+          materialId: 'demo-mat-metal',
+          materialName: 'Aluminio y Metales',
+          category: 'METAL',
+          estimatedWeightGrams: 1200,
+        ),
+      ],
     ),
   };
 

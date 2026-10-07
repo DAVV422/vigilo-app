@@ -6,6 +6,7 @@ import '../domain/entities/recycling_listing.dart';
 import '../domain/entities/recycling_pickup.dart';
 import '../domain/entities/user.dart';
 import '../presentation/providers/providers.dart';
+import '../presentation/screens/recycling/pickup_detail_screen.dart';
 import '../theme/app_colors.dart';
 import '../widgets/main_app_bar.dart';
 
@@ -221,26 +222,39 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> {
           .map(
             (pickup) => Container(
               margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: AppColors.surfaceContainerLowest,
                 border: Border.all(color: AppColors.outlineVariant),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.local_shipping_outlined, color: AppColors.primary, size: 22),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(pickup.listingAddress ?? 'Dirección no disponible', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                        Text(pickup.status, style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant)),
-                      ],
-                    ),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () async {
+                  final changed = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(builder: (_) => PickupDetailScreen(pickupId: pickup.id)),
+                  );
+                  if (changed == true) await _load();
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.local_shipping_outlined, color: AppColors.primary, size: 22),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(pickup.listingAddress ?? 'Dirección no disponible', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                            Text(pickup.status, style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant)),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: AppColors.outline, size: 20),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           )
