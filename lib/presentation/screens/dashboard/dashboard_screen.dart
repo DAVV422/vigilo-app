@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../domain/entities/incident.dart';
 import '../../../theme/app_colors.dart';
@@ -40,7 +41,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(proximityNotifierProvider.notifier).start();
     });
-    _setUpNotificationTapHandling();
+    // En modo demo no hay Firebase inicializado (ver main.dart) — ni
+    // siquiera se debe instanciar PushNotificationService, porque su
+    // constructor accede a FirebaseMessaging.instance y eso explota con
+    // "No Firebase App" si Firebase.initializeApp() nunca corrió.
+    if (!AppConfig.demoMode) {
+      _setUpNotificationTapHandling();
+    }
   }
 
   void _setUpNotificationTapHandling() {
