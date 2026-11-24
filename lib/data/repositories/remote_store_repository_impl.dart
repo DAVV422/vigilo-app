@@ -2,6 +2,7 @@ import '../../domain/entities/redemption.dart';
 import '../../domain/entities/store_product.dart';
 import '../../domain/repositories/store_repository.dart';
 import '../datasources/remote/remote_store_datasource.dart';
+import '../../core/network/json_parsing.dart';
 
 class RemoteStoreRepositoryImpl implements StoreRepository {
   RemoteStoreRepositoryImpl(this._datasource);
@@ -23,14 +24,14 @@ class RemoteStoreRepositoryImpl implements StoreRepository {
       productId: product?['id'] as String? ?? productId,
       productName: product?['name'] as String?,
       productImageUrl: product?['imageUrl'] as String?,
-      pointsSpent: (json['pointsSpent'] as num).toInt(),
+      pointsSpent: toInt(json['pointsSpent'], field: 'pointsSpent'),
       code: json['code'] as String,
       status: json['status'] as String,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : DateTime.now(),
     );
-    return (redemption: redemption, remainingBalance: (json['remainingBalance'] as num).toInt());
+    return (redemption: redemption, remainingBalance: toInt(json['remainingBalance'], field: 'remainingBalance'));
   }
 
   @override

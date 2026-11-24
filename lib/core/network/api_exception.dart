@@ -3,11 +3,21 @@
 /// de NestJS (`{statusCode, message, error}`, donde `message` puede ser un
 /// string o un arreglo de errores de validación de `class-validator`).
 class ApiException implements Exception {
-  ApiException({required this.statusCode, required this.message, this.cause});
+  ApiException({
+    required this.statusCode,
+    required this.message,
+    this.cause,
+    this.requestId,
+  });
 
   final int statusCode;
   final String message;
   final Object? cause;
+
+  /// Identificador que el backend asigna a la petición y devuelve en la
+  /// cabecera `X-Request-Id`. Permite ubicar en los logs del servidor la
+  /// petición exacta que falló, sin cruzar por timestamp.
+  final String? requestId;
 
   bool get isUnauthorized => statusCode == 401;
   bool get isForbidden => statusCode == 403;
@@ -16,7 +26,9 @@ class ApiException implements Exception {
   bool get isValidationError => statusCode == 400;
 
   @override
-  String toString() => 'ApiException($statusCode): $message';
+  String toString() =>
+      'ApiException($statusCode): $message'
+      '${requestId != null ? ' [req $requestId]' : ''}';
 }
 
 /// La sesión ya no es válida (refresh token vencido o revocado) — la capa de

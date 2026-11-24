@@ -1,12 +1,13 @@
 // lib/presentation/screens/store/store_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/network/api_exception.dart';
 import '../../../theme/app_colors.dart';
 import '../../../domain/entities/store_product.dart';
 import '../../providers/providers.dart';
 import '../../widgets/store/product_card.dart';
 import '../../../widgets/main_app_bar.dart';
+import '../../../../core/errors/describe_error.dart';
+import '../../../../core/logging/app_logger.dart';
 
 /// Tienda de canje contra `StoreRepository` (backend real). Reemplaza la
 /// versión anterior, que tenía 8 productos hardcodeados y un saldo de
@@ -20,6 +21,7 @@ class StoreScreen extends ConsumerStatefulWidget {
 }
 
 class _StoreScreenState extends ConsumerState<StoreScreen> {
+  static const _log = AppLogger('Tienda');
   String _selectedCategory = 'Todos';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
@@ -47,10 +49,10 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         _products = products;
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (e, st) {
       if (!mounted) return;
       setState(() {
-        _loadError = e is ApiException ? e.message : 'No se pudo cargar la tienda.';
+        _loadError = describeError(e, st, log: _log, operation: 'cargar la tienda');
         _isLoading = false;
       });
     }
@@ -97,9 +99,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         ),
       );
       await _loadProducts();
-    } catch (e) {
+    } catch (e, st) {
       if (!mounted) return;
-      final message = e is ApiException ? e.message : 'No se pudo completar el canje.';
+      final message = describeError(e, st, log: _log, operation: 'completar el canje', whereToCheck: 'Mis Canjes');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message), backgroundColor: AppColors.error),
       );

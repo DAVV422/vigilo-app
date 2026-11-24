@@ -66,8 +66,11 @@ class ApiClient {
     final path = error.requestOptions.path;
     final isExempt = _authRoutesExemptFromRefresh.any(path.endsWith);
 
+    final requestId = _requestIdOf(error.response);
     _log.warning(
-      '<- ${error.requestOptions.method} $path ${error.response?.statusCode ?? '(sin respuesta)'}: ${error.message}',
+      '<- ${error.requestOptions.method} $path '
+      '${error.response?.statusCode ?? '(sin respuesta)'}'
+      '${requestId != null ? ' [req $requestId]' : ''}: ${error.message}',
     );
 
     if (!isUnauthorized || isExempt) {
@@ -126,6 +129,13 @@ class ApiClient {
     return newAccessToken;
   }
 
+  /// Identificador que el backend devuelve en `X-Request-Id`, para poder
+  /// cruzar el error del cliente con la línea exacta del log del servidor.
+  static String? _requestIdOf(Response<dynamic>? response) {
+    final value = response?.headers.value('x-request-id');
+    return (value == null || value.isEmpty) ? null : value;
+  }
+
   /// Traduce un [DioException] a [ApiException], extrayendo el mensaje del
   /// envoltorio de error de NestJS (`message` puede ser string o un arreglo
   /// de errores de `class-validator`).
@@ -136,6 +146,7 @@ class ApiClient {
 
     final statusCode = error.response?.statusCode ?? 0;
     final body = error.response?.data;
+    final requestId = _requestIdOf(error.response);
     String message = error.message ?? 'Error de conexión con el servidor';
 
     if (body is Map) {
@@ -147,6 +158,11 @@ class ApiClient {
       }
     }
 
-    return ApiException(statusCode: statusCode, message: message, cause: error);
+    return ApiException(
+      statusCode: statusCode,
+      message: message,
+      cause: error,
+      requestId: requestId,
+    );
   }
 }

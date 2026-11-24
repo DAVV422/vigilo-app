@@ -2,11 +2,12 @@ import 'dart:io';
 import 'package:flutter/material.dart' hide MaterialType;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../core/network/api_exception.dart';
 import '../../../domain/entities/recycling_pickup.dart';
 import '../../../domain/repositories/recycling_repository.dart';
 import '../../../theme/app_colors.dart';
 import '../../providers/providers.dart';
+import '../../../../core/errors/describe_error.dart';
+import '../../../../core/logging/app_logger.dart';
 
 class _PaymentOption {
   final String value;
@@ -37,6 +38,7 @@ class PickupWeighInScreen extends ConsumerStatefulWidget {
 }
 
 class _PickupWeighInScreenState extends ConsumerState<PickupWeighInScreen> {
+  static const _log = AppLogger('Pesaje');
   late final Map<String, TextEditingController> _weightControllers;
   final TextEditingController _amountController = TextEditingController(text: '0');
   final TextEditingController _notesController = TextEditingController();
@@ -142,8 +144,8 @@ class _PickupWeighInScreenState extends ConsumerState<PickupWeighInScreen> {
         ),
       );
       if (mounted) Navigator.pop(context, true);
-    } catch (e) {
-      final message = e is ApiException ? e.message : 'No se pudo registrar el pesaje.';
+    } catch (e, st) {
+      final message = describeError(e, st, log: _log, operation: 'registrar el pesaje', whereToCheck: 'Mis Recojos');
       _showError(message);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);

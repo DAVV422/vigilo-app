@@ -1,3 +1,4 @@
+import '../../core/network/json_parsing.dart';
 class MaterialImpactBreakdown {
   final String materialName;
   final String category;
@@ -13,7 +14,7 @@ class MaterialImpactBreakdown {
     return MaterialImpactBreakdown(
       materialName: json['materialName'] as String,
       category: json['category'] as String,
-      totalWeightKg: (json['totalWeightKg'] as num).toDouble(),
+      totalWeightKg: toDouble(json['totalWeightKg'], field: 'totalWeightKg'),
     );
   }
 }
@@ -43,14 +44,14 @@ class PlatformImpact {
 
   factory PlatformImpact.fromJson(Map<String, dynamic> json) {
     return PlatformImpact(
-      totalWeightKgRecycled: (json['totalWeightKgRecycled'] as num).toDouble(),
-      co2AvoidedKg: (json['co2AvoidedKg'] as num).toDouble(),
+      totalWeightKgRecycled: toDouble(json['totalWeightKgRecycled'], field: 'totalWeightKgRecycled'),
+      co2AvoidedKg: toDouble(json['co2AvoidedKg'], field: 'co2AvoidedKg'),
       pointsIssued: json['pointsIssued'] as int,
       pointsRedeemed: json['pointsRedeemed'] as int,
       activeRecyclers: json['activeRecyclers'] as int,
       listingsPublished: json['listingsPublished'] as int,
       listingsCompleted: json['listingsCompleted'] as int,
-      retrievalRatePercent: (json['retrievalRatePercent'] as num).toDouble(),
+      retrievalRatePercent: toDouble(json['retrievalRatePercent'], field: 'retrievalRatePercent'),
       materialBreakdown: (json['materialBreakdown'] as List<dynamic>)
           .map((m) => MaterialImpactBreakdown.fromJson(m as Map<String, dynamic>))
           .toList(),

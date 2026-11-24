@@ -2,6 +2,7 @@ import 'package:latlong2/latlong.dart';
 import '../../domain/entities/incident.dart';
 import '../../domain/repositories/incident_repository.dart';
 import '../datasources/remote/remote_incident_datasource.dart';
+import '../../core/network/json_parsing.dart';
 
 /// Centro usado por [getIncidents] mientras no exista un flujo que pase la
 /// ubicación real del usuario a esta capa (el backend no tiene un endpoint
@@ -37,8 +38,8 @@ class RemoteIncidentRepositoryImpl implements IncidentRepository {
       title: json['title'] as String,
       description: (json['description'] as String?) ?? '',
       location: LatLng(
-        (json['latitude'] as num).toDouble(),
-        (json['longitude'] as num).toDouble(),
+        toDouble(json['latitude'], field: 'latitude'),
+        toDouble(json['longitude'], field: 'longitude'),
       ),
       type: type,
       severity: severity,

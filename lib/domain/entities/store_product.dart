@@ -1,3 +1,4 @@
+import '../../core/network/json_parsing.dart';
 class StoreProduct {
   final String id;
   final String name;
@@ -25,8 +26,8 @@ class StoreProduct {
       name: json['name'] as String,
       description: json['description'] as String? ?? '',
       imageUrl: json['imageUrl'] as String? ?? '',
-      pointsCost: (json['pointsCost'] as num).toInt(),
-      stock: (json['stock'] as num?)?.toInt() ?? 0,
+      pointsCost: toInt(json['pointsCost'], field: 'pointsCost'),
+      stock: toIntOrNull(json['stock']) ?? 0,
       category: json['category'] as String? ?? 'General',
       active: json['active'] as bool? ?? true,
     );

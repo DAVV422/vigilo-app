@@ -17,7 +17,7 @@ class RecyclingListingMaterial {
       materialId: json['materialId'] as String,
       materialName: json['materialName'] as String?,
       category: json['category'] as String?,
-      estimatedWeightGrams: (json['estimatedWeightGrams'] as num).toDouble(),
+      estimatedWeightGrams: toDouble(json['estimatedWeightGrams'], field: 'estimatedWeightGrams'),
     );
   }
 }
@@ -128,8 +128,8 @@ class RecyclingListing {
       status: json['status'] as String,
       address: json['address'] as String?,
       approximateAddress: json['approximateAddress'] as String?,
-      latitude: ((json['latitude'] ?? json['fuzzedLatitude']) as num).toDouble(),
-      longitude: ((json['longitude'] ?? json['fuzzedLongitude']) as num).toDouble(),
+      latitude: toDouble(json['latitude'] ?? json['fuzzedLatitude'], field: 'latitude'),
+      longitude: toDouble(json['longitude'] ?? json['fuzzedLongitude'], field: 'longitude'),
       isExactLocation: json['isExactLocation'] as bool? ?? false,
       notes: json['notes'] as String?,
       photoMediaId: json['photoMediaId'] as String?,

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/network/api_exception.dart';
 import '../../../domain/entities/recycling_pickup.dart';
 import '../../../theme/app_colors.dart';
 import '../../providers/providers.dart';
 import 'pickup_weigh_in_screen.dart';
+import '../../../../core/errors/describe_error.dart';
+import '../../../../core/logging/app_logger.dart';
 
 /// Pantalla del reciclador para avanzar un recojo ya reservado: marcar que
 /// va en camino, que llegó, y finalmente pesar el material (ver
@@ -21,6 +22,7 @@ class PickupDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _PickupDetailScreenState extends ConsumerState<PickupDetailScreen> {
+  static const _log = AppLogger('Recojo');
   RecyclingPickup? _pickup;
   bool _isLoading = true;
   bool _isActing = false;
@@ -44,10 +46,10 @@ class _PickupDetailScreenState extends ConsumerState<PickupDetailScreen> {
         _pickup = pickup;
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (e, st) {
       if (!mounted) return;
       setState(() {
-        _error = e is ApiException ? e.message : 'No se pudo cargar el recojo.';
+        _error = describeError(e, st, log: _log, operation: 'cargar el recojo');
         _isLoading = false;
       });
     }
@@ -66,9 +68,9 @@ class _PickupDetailScreenState extends ConsumerState<PickupDetailScreen> {
     try {
       await action();
       await _load();
-    } catch (e) {
+    } catch (e, st) {
       if (!mounted) return;
-      final message = e is ApiException ? e.message : 'No se pudo actualizar el recojo.';
+      final message = describeError(e, st, log: _log, operation: 'actualizar el recojo', whereToCheck: 'Mis Recojos');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: AppColors.error));
     } finally {
       if (mounted) setState(() => _isActing = false);

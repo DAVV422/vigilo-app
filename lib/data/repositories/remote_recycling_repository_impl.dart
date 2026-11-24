@@ -3,6 +3,7 @@ import '../../domain/entities/recycling_listing.dart';
 import '../../domain/entities/recycling_pickup.dart';
 import '../../domain/repositories/recycling_repository.dart';
 import '../datasources/remote/remote_recycling_datasource.dart';
+import '../../core/network/json_parsing.dart';
 
 class RemoteRecyclingRepositoryImpl implements RecyclingRepository {
   RemoteRecyclingRepositoryImpl(this._datasource);
@@ -139,8 +140,8 @@ class RemoteRecyclingRepositoryImpl implements RecyclingRepository {
   Future<({int pointsAwarded, int newPointsBalance})> confirmPickup(String pickupId) async {
     final json = await _datasource.confirmPickup(pickupId);
     return (
-      pointsAwarded: (json['pointsAwarded'] as num).toInt(),
-      newPointsBalance: (json['newPointsBalance'] as num).toInt(),
+      pointsAwarded: toInt(json['pointsAwarded'], field: 'pointsAwarded'),
+      newPointsBalance: toInt(json['newPointsBalance'], field: 'newPointsBalance'),
     );
   }
 

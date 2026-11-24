@@ -2,6 +2,7 @@ import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../core/storage/secure_session_storage.dart';
 import '../datasources/remote/remote_auth_datasource.dart';
+import '../../core/network/json_parsing.dart';
 
 class RemoteAuthRepositoryImpl implements AuthRepository {
   RemoteAuthRepositoryImpl(this._datasource, this._sessionStorage);
@@ -45,8 +46,8 @@ class RemoteAuthRepositoryImpl implements AuthRepository {
       lastName: data['lastName'] as String? ?? '',
       username: data['username'] as String? ?? '',
       email: data['email'] as String,
-      points: (data['pointsBalance'] as num?)?.toInt() ?? 0,
-      trustScore: (data['trustScore'] as num?)?.toDouble() ?? 5.0,
+      points: toIntOrNull(data['pointsBalance']) ?? 0,
+      trustScore: toDoubleOrNull(data['trustScore']) ?? 5.0,
       roles: _mapRoles((data['roles'] as List<dynamic>?) ?? const []),
     );
   }
@@ -60,9 +61,9 @@ class RemoteAuthRepositoryImpl implements AuthRepository {
       email: data['email'] as String,
       phone: data['phone'] as String? ?? '',
       avatarUrl: data['avatarUrl'] as String? ?? '',
-      points: (data['pointsBalance'] as num?)?.toInt() ?? 0,
-      trustScore: (data['trustScore'] as num?)?.toDouble() ?? 5.0,
-      ratingsCount: (data['ratingsCount'] as num?)?.toInt() ?? 0,
+      points: toIntOrNull(data['pointsBalance']) ?? 0,
+      trustScore: toDoubleOrNull(data['trustScore']) ?? 5.0,
+      ratingsCount: toIntOrNull(data['ratingsCount']) ?? 0,
       roles: _mapRoles((data['roles'] as List<dynamic>?) ?? const []),
     );
   }

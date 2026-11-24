@@ -1,3 +1,4 @@
+import '../../core/network/json_parsing.dart';
 class CitizenSummary {
   final int incidentsReported;
   final int incidentsResolved;
@@ -38,9 +39,9 @@ class CitizenSummary {
       incidentsValidated: incidents['validated'] as int,
       listingsPublished: asCitizen['listingsPublished'] as int,
       listingsCompleted: asCitizen['listingsCompleted'] as int,
-      recycledAsCitizenKg: (asCitizen['totalWeightKg'] as num).toDouble(),
+      recycledAsCitizenKg: toDouble(asCitizen['totalWeightKg'], field: 'asCitizen.totalWeightKg'),
       pickupsCompletedAsRecycler: asRecycler['pickupsCompleted'] as int,
-      recycledAsRecyclerKg: (asRecycler['totalWeightKg'] as num).toDouble(),
+      recycledAsRecyclerKg: toDouble(asRecycler['totalWeightKg'], field: 'asRecycler.totalWeightKg'),
       pointsBalance: points['balance'] as int,
       pointsEarned: points['totalEarned'] as int,
       pointsRedeemed: points['totalRedeemed'] as int,

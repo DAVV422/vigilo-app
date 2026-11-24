@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/network/api_exception.dart';
 import '../../../domain/entities/recycling_pickup.dart';
 import '../../../theme/app_colors.dart';
 import '../../providers/providers.dart';
+import '../../../../core/errors/describe_error.dart';
+import '../../../../core/logging/app_logger.dart';
 
 /// El ciudadano revisa el pesaje que registró el recolector y confirma (se
 /// acreditan los puntos) o disputa (si el peso/pago no coincide con lo
@@ -19,6 +20,7 @@ class PickupConfirmationScreen extends ConsumerStatefulWidget {
 }
 
 class _PickupConfirmationScreenState extends ConsumerState<PickupConfirmationScreen> {
+  static const _log = AppLogger('Recojo');
   RecyclingPickup? _pickup;
   bool _isLoading = true;
   bool _isActing = false;
@@ -42,10 +44,10 @@ class _PickupConfirmationScreenState extends ConsumerState<PickupConfirmationScr
         _pickup = pickup;
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (e, st) {
       if (!mounted) return;
       setState(() {
-        _error = e is ApiException ? e.message : 'No se pudo cargar el recojo.';
+        _error = describeError(e, st, log: _log, operation: 'cargar el recojo');
         _isLoading = false;
       });
     }
@@ -86,9 +88,9 @@ class _PickupConfirmationScreenState extends ConsumerState<PickupConfirmationScr
         ),
       );
       if (mounted) Navigator.pop(context, true);
-    } catch (e) {
+    } catch (e, st) {
       if (!mounted) return;
-      final message = e is ApiException ? e.message : 'No se pudo confirmar el recojo.';
+      final message = describeError(e, st, log: _log, operation: 'confirmar el recojo', whereToCheck: 'Mis Publicaciones');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: AppColors.error));
     } finally {
       if (mounted) setState(() => _isActing = false);
@@ -134,9 +136,9 @@ class _PickupConfirmationScreenState extends ConsumerState<PickupConfirmationScr
         const SnackBar(content: Text('Disputa registrada. Un administrador la revisará.')),
       );
       Navigator.pop(context, true);
-    } catch (e) {
+    } catch (e, st) {
       if (!mounted) return;
-      final message = e is ApiException ? e.message : 'No se pudo registrar la disputa.';
+      final message = describeError(e, st, log: _log, operation: 'registrar la disputa', whereToCheck: 'Mis Publicaciones');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: AppColors.error));
     } finally {
       if (mounted) setState(() => _isActing = false);

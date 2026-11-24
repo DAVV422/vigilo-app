@@ -3,12 +3,13 @@ import 'package:flutter/material.dart' hide MaterialType;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../core/network/api_exception.dart';
 import '../../../theme/app_colors.dart';
 import '../../../domain/entities/material_type.dart';
 import '../../../domain/entities/recycling_listing.dart';
 import '../../../domain/repositories/recycling_repository.dart';
 import '../../providers/providers.dart';
+import '../../../core/errors/describe_error.dart';
+import '../../../core/logging/app_logger.dart';
 
 /// Publica una [RecyclingListing] real contra el backend. Reemplaza la
 /// versión anterior, que construía un `Incident` genérico de tipo
@@ -37,6 +38,7 @@ class _TimeSlot {
 }
 
 class _RecycleFormScreenState extends ConsumerState<RecycleFormScreen> {
+  static const _log = AppLogger('Reciclaje');
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _weightController = TextEditingController();
@@ -81,12 +83,15 @@ class _RecycleFormScreenState extends ConsumerState<RecycleFormScreen> {
         _selectedMaterial = materials.isNotEmpty ? materials.first : null;
         _loadingMaterials = false;
       });
-    } catch (e) {
+    } catch (e, st) {
       if (!mounted) return;
       setState(() {
-        _materialsError = e is ApiException
-            ? e.message
-            : 'No se pudo cargar el catálogo de materiales.';
+        _materialsError = describeError(
+          e,
+          st,
+          log: _log,
+          operation: 'cargar el catálogo de materiales',
+        );
         _loadingMaterials = false;
       });
     }
@@ -201,11 +206,19 @@ class _RecycleFormScreenState extends ConsumerState<RecycleFormScreen> {
       );
 
       if (mounted) _showSuccessDialog();
-    } catch (e) {
-      final message = e is ApiException
-          ? e.message
-          : 'No se pudo publicar. Revisa tu conexión e intenta de nuevo.';
-      _showError(message);
+    } catch (e, st) {
+      // `whereToCheck` no es decorativo: si la peticion llego a salir y lo que
+      // fallo fue interpretar la respuesta, la publicacion ya existe. Decirle
+      // al usuario "intenta de nuevo" a secas es lo que generaba duplicados.
+      _showError(
+        describeError(
+          e,
+          st,
+          log: _log,
+          operation: 'publicar material reciclable',
+          whereToCheck: 'Mis Publicaciones',
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

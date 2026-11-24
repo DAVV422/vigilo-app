@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/network/api_exception.dart';
 import '../../../domain/entities/recycling_listing.dart';
 import '../../../theme/app_colors.dart';
 import '../../providers/providers.dart';
 import 'pickup_confirmation_screen.dart';
+import '../../../core/errors/describe_error.dart';
+import '../../../core/logging/app_logger.dart';
 
 /// El ciudadano no tenía ninguna forma de ver sus propias publicaciones ni
 /// de descubrir cuáles ya tienen un pesaje esperando su confirmación —
@@ -18,6 +19,7 @@ class MyListingsScreen extends ConsumerStatefulWidget {
 }
 
 class _MyListingsScreenState extends ConsumerState<MyListingsScreen> {
+  static const _log = AppLogger('MisPublicaciones');
   List<RecyclingListing> _listings = [];
   bool _isLoading = true;
   String? _error;
@@ -40,10 +42,10 @@ class _MyListingsScreenState extends ConsumerState<MyListingsScreen> {
         _listings = listings;
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (e, st) {
       if (!mounted) return;
       setState(() {
-        _error = e is ApiException ? e.message : 'No se pudieron cargar tus publicaciones.';
+        _error = describeError(e, st, log: _log, operation: 'cargar tus publicaciones');
         _isLoading = false;
       });
     }

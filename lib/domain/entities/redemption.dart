@@ -1,3 +1,4 @@
+import '../../core/network/json_parsing.dart';
 class Redemption {
   final String id;
   final String productId;
@@ -28,7 +29,7 @@ class Redemption {
       productId: json['productId'] as String,
       productName: product?['name'] as String?,
       productImageUrl: product?['imageUrl'] as String?,
-      pointsSpent: (json['pointsSpent'] as num).toInt(),
+      pointsSpent: toInt(json['pointsSpent'], field: 'pointsSpent'),
       code: json['code'] as String,
       status: json['status'] as String,
       createdAt: DateTime.parse(json['createdAt'] as String),

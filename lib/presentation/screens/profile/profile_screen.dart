@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/network/api_exception.dart';
 import '../../../domain/entities/user.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_icons.dart';
 import '../../providers/providers.dart';
 import '../../../widgets/main_app_bar.dart';
+import '../../../../core/errors/describe_error.dart';
+import '../../../../core/logging/app_logger.dart';
 
 /// Reescrito para dejar de mostrar datos inventados (galería de medallas y
 /// tiempos de respuesta por categoría eran 100% hardcodeados, sin relación
@@ -21,6 +22,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  static const _log = AppLogger('Perfil');
   bool _requestingRecyclerRole = false;
 
   // Nombres de nivel neutros en vez de "Novato/Héroe/Leyenda".
@@ -69,9 +71,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       await ref.read(authProvider.notifier).reloadUser();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.message)));
-    } catch (e) {
+    } catch (e, st) {
       if (!mounted) return;
-      final message = e is ApiException ? e.message : 'No se pudo activar el rol.';
+      final message = describeError(e, st, log: _log, operation: 'activar el rol', whereToCheck: 'Perfil');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message), backgroundColor: AppColors.error),
       );

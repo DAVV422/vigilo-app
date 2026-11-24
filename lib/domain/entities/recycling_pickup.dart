@@ -18,8 +18,8 @@ class RecyclingPickupResult {
     return RecyclingPickupResult(
       materialId: json['materialId'] as String,
       materialName: json['materialName'] as String?,
-      actualWeightGrams: (json['actualWeightGrams'] as num).toDouble(),
-      pointsAwarded: (json['pointsAwarded'] as num).toInt(),
+      actualWeightGrams: toDouble(json['actualWeightGrams'], field: 'actualWeightGrams'),
+      pointsAwarded: toInt(json['pointsAwarded'], field: 'pointsAwarded'),
     );
   }
 }
@@ -43,7 +43,7 @@ class PickupCompensation {
     return PickupCompensation(
       id: json['id'] as String,
       paymentMethod: json['paymentMethod'] as String,
-      grossAmount: (json['grossAmount'] as num).toDouble(),
+      grossAmount: toDouble(json['grossAmount'], field: 'grossAmount'),
       voucherMediaId: json['voucherMediaId'] as String?,
       status: json['status'] as String,
     );
@@ -145,8 +145,8 @@ class CompletePickupResult {
     return CompletePickupResult(
       pickupId: json['pickupId'] as String,
       status: json['status'] as String,
-      totalPointsCalculated: (json['totalPointsCalculated'] as num).toInt(),
-      grossAmount: (json['grossAmount'] as num?)?.toDouble() ?? 0,
+      totalPointsCalculated: toInt(json['totalPointsCalculated'], field: 'totalPointsCalculated'),
+      grossAmount: toDoubleOrNull(json['grossAmount']) ?? 0,
       paymentMethod: json['paymentMethod'] as String,
     );
   }
