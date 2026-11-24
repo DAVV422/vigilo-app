@@ -1,3 +1,4 @@
+import '../../core/network/json_parsing.dart';
 class RecyclingListingMaterial {
   final String materialId;
   final String? materialName;
@@ -68,7 +69,7 @@ class RecyclingListingCitizen {
       firstName: json['firstName'] as String?,
       lastName: json['lastName'] as String?,
       phone: json['phone'] as String?,
-      trustScore: (json['trustScore'] as num?)?.toDouble(),
+      trustScore: toDoubleOrNull(json['trustScore']),
     );
   }
 }

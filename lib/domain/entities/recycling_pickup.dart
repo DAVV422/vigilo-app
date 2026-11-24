@@ -1,4 +1,5 @@
 import 'recycling_listing.dart' show RecyclingListingMaterial;
+import '../../core/network/json_parsing.dart';
 
 class RecyclingPickupResult {
   final String materialId;
@@ -108,7 +109,7 @@ class RecyclingPickup {
       citizenId: citizen?['id'] as String?,
       citizenName: citizen?['name'] as String?,
       citizenPhone: citizen?['phone'] as String?,
-      citizenTrustScore: (citizen?['trustScore'] as num?)?.toDouble(),
+      citizenTrustScore: toDoubleOrNull(citizen?['trustScore']),
       results: ((json['results'] as List<dynamic>?) ?? [])
           .map((r) => RecyclingPickupResult.fromJson(r as Map<String, dynamic>))
           .toList(),
