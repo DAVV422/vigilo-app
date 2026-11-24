@@ -158,6 +158,20 @@ final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) 
 // --- Auth State ---
 final authProvider = NotifierProvider<AuthNotifier, User?>(AuthNotifier.new);
 
+/// Roles activos del usuario en sesión; lista vacía si no hay sesión.
+///
+/// Derivado de [authProvider] a propósito, no estado nuevo: así cualquier
+/// cosa que mueva la sesión —login, restauración, `reloadUser`, logout—
+/// propaga sola y no hay dos fuentes de verdad que puedan discrepar.
+final currentRolesProvider = Provider<List<UserRole>>((ref) {
+  return ref.watch(authProvider)?.roles ?? const [];
+});
+
+/// Azúcar para las pantallas: `ref.watch(hasRoleProvider(UserRole.recycling))`.
+final hasRoleProvider = Provider.family<bool, UserRole>((ref, role) {
+  return ref.watch(currentRolesProvider).contains(role);
+});
+
 class AuthNotifier extends Notifier<User?> {
   static const _log = AppLogger('Auth');
 
@@ -300,37 +314,39 @@ class AuthNotifier extends Notifier<User?> {
 }
 
 // --- Navigation State ---
-final currentNavIndexProvider = NotifierProvider<NavIndexNotifier, int>(
-  () => NavIndexNotifier(),
+final currentTabProvider = NotifierProvider<NavTabNotifier, AppTab>(
+  () => NavTabNotifier(),
 );
 final selectedIncidentProvider =
     NotifierProvider<SelectedIncidentNotifier, Incident?>(
       () => SelectedIncidentNotifier(),
     );
 
-class NavIndexNotifier extends Notifier<int> {
+/// Pestañas posibles de la barra inferior.
+///
+/// La navegación guarda *cuál* pestaña está activa, no en qué posición está.
+/// La diferencia importa desde que la barra se arma según el rol: para un
+/// ciudadano el índice 1 es Alertas, pero para un recolector sin rol
+/// ciudadano es Recolecciones, y el índice 3 es Perfil con cuatro pestañas
+/// y Tienda con cinco. Guardar un entero hacía que `setIndex(3)` llevara a
+/// destinos distintos según quién hubiera iniciado sesión.
+enum AppTab { map, alerts, collections, store, profile }
+
+class NavTabNotifier extends Notifier<AppTab> {
   @override
-  int build() => 0;
+  AppTab build() => AppTab.map;
 
-  void setIndex(int index) {
-    state = index;
+  void goTo(AppTab tab) {
+    state = tab;
   }
 
-  void goToMap() {
-    state = 0;
-  }
+  void goToMap() => goTo(AppTab.map);
 
-  void goToAlerts() {
-    state = 1;
-  }
+  void goToAlerts() => goTo(AppTab.alerts);
 
-  void goToStore() {
-    state = 2;
-  }
+  void goToStore() => goTo(AppTab.store);
 
-  void goToProfile() {
-    state = 3;
-  }
+  void goToProfile() => goTo(AppTab.profile);
 }
 
 class SelectedIncidentNotifier extends Notifier<Incident?> {

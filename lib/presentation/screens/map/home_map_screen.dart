@@ -364,7 +364,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
     // incidente (ej. tap en una notificación push) debe llegar por aquí.
     ref.listen<Incident?>(selectedIncidentProvider, (previous, next) {
       if (next == null) return;
-      ref.read(currentNavIndexProvider.notifier).goToMap();
+      ref.read(currentTabProvider.notifier).goToMap();
       _mapController.move(next.location, 17.0);
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
@@ -994,7 +994,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                       });
                       Future.delayed(const Duration(milliseconds: 250), () {
                         if (mounted) {
-                          ref.read(currentNavIndexProvider.notifier).setIndex(1);
+                          ref.read(currentTabProvider.notifier).goToAlerts();
                         }
                       });
                     }),

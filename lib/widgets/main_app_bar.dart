@@ -38,7 +38,7 @@ class MainAppBar extends ConsumerWidget implements PreferredSizeWidget {
           padding: const EdgeInsets.only(right: 16.0),
           child: GestureDetector(
             onTap: () {
-              ref.read(currentNavIndexProvider.notifier).setIndex(3);
+              ref.read(currentTabProvider.notifier).goToProfile();
             },
             child: CircleAvatar(
               radius: 18,

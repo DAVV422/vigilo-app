@@ -8,6 +8,8 @@ import '../../../core/logging/app_logger.dart';
 import '../../../domain/entities/incident.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_icons.dart';
+import '../../../domain/entities/user.dart';
+import '../../../screens/collections_screen.dart';
 import '../alerts/alerts_screen.dart';
 import '../map/home_map_screen.dart';
 import '../profile/profile_screen.dart';
@@ -25,14 +27,6 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   static const _log = AppLogger('Push');
 
-  // Índice 0: Mapa (Vista activa inicial)
-
-  final List<Widget> _screens = const [
-    HomeMapScreen(),
-    AlertsScreen(),
-    StoreScreen(),
-    ProfileScreen(),
-  ];
 
   StreamSubscription<RemoteMessage>? _notificationTapSub;
 
@@ -76,7 +70,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     final incidentId = message.data['incidentId'] as String?;
     if (incidentId == null) {
-      ref.read(currentNavIndexProvider.notifier).goToAlerts();
+      ref.read(currentTabProvider.notifier).goToAlerts();
       return;
     }
 
@@ -95,7 +89,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     } else {
       // El incidente notificado no está en el radio cargado localmente;
       // igual mandamos al usuario a Alertas para que no quede varado.
-      ref.read(currentNavIndexProvider.notifier).goToAlerts();
+      ref.read(currentTabProvider.notifier).goToAlerts();
     }
   }
 
@@ -106,21 +100,65 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     super.dispose();
   }
 
+  /// Pestañas visibles según los roles activos.
+  ///
+  /// `Recolecciones` no es una pantalla nueva: es [CollectionsScreen] —
+  /// material disponible, recojos activos y reclamo—, que ya existía pero
+  /// solo se alcanzaba desde un botón dentro del mapa. Un recolector que no
+  /// descubriera ese botón no tenía cómo trabajar.
+  ///
+  /// `SECURITY_GUARD` y `TRASH_COLLECTOR` todavía caen en el layout de
+  /// ciudadano: sus pantallas dependen de que exista la gestión de empresas
+  /// (Fase C.2 del plan), porque hasta entonces no tienen una empresa a la
+  /// que pertenecer ni una zona asignada.
+  List<_TabSpec> _tabsFor(List<UserRole> roles) {
+    final isRecycler = roles.contains(UserRole.recycling);
+    // Sin roles se asume ciudadano: si el backend devolviera una lista vacía
+    // —por ejemplo con todos los roles en PENDING— es preferible una app
+    // usable a una barra con dos pestañas.
+    final isCitizen = roles.contains(UserRole.normal) || !isRecycler;
+
+    return [
+      const _TabSpec(AppTab.map, HomeMapScreen(), AppIcons.map, 'Mapa'),
+      if (isCitizen)
+        const _TabSpec(AppTab.alerts, AlertsScreen(), AppIcons.notifications, 'Alertas'),
+      if (isRecycler)
+        const _TabSpec(
+          AppTab.collections,
+          CollectionsScreen(),
+          AppIcons.recycling,
+          'Recolecciones',
+        ),
+      const _TabSpec(AppTab.store, StoreScreen(), AppIcons.store, 'Tienda'),
+      const _TabSpec(AppTab.profile, ProfileScreen(), AppIcons.person, 'Perfil'),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
-    final currentIndex = ref.watch(currentNavIndexProvider);
+    final tabs = _tabsFor(ref.watch(currentRolesProvider));
+    final selected = ref.watch(currentTabProvider);
+
+    // Se busca por identidad y no por posición: así, si la barra cambia de
+    // composición mientras la app está abierta (al activarse el rol de
+    // recolector), el usuario se queda en la pestaña donde estaba en vez de
+    // saltar a la que haya quedado en ese índice. El -1 solo ocurre si la
+    // pestaña activa dejó de existir para este rol; ahí, al mapa.
+    final foundIndex = tabs.indexWhere((t) => t.tab == selected);
+    final currentIndex = foundIndex < 0 ? 0 : foundIndex;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: IndexedStack(
         index: currentIndex,
-        children: _screens,
+        children: [for (final t in tabs) t.screen],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: currentIndex,
         onTap: (index) {
-          ref.read(currentNavIndexProvider.notifier).setIndex(index);
-          if (index != 0) {
+          final tab = tabs[index].tab;
+          ref.read(currentTabProvider.notifier).goTo(tab);
+          if (tab != AppTab.map) {
             ref.read(selectedIncidentProvider.notifier).clear();
           }
         },
@@ -129,25 +167,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         unselectedItemColor: AppColors.onSurfaceVariant,
         backgroundColor: AppColors.surfaceContainerLowest,
         elevation: 8,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(AppIcons.map),
-            label: 'Mapa',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(AppIcons.notifications),
-            label: 'Alertas',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(AppIcons.store),
-            label: 'Tienda',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(AppIcons.person),
-            label: 'Perfil',
-          ),
+        items: [
+          for (final t in tabs)
+            BottomNavigationBarItem(icon: Icon(t.icon), label: t.label),
         ],
       ),
     );
   }
+}
+
+/// Una pestaña y todo lo que hace falta para pintarla. Antes la lista de
+/// pantallas y la de ítems de la barra eran dos listas paralelas que había
+/// que acordarse de editar juntas.
+class _TabSpec {
+  const _TabSpec(this.tab, this.screen, this.icon, this.label);
+
+  final AppTab tab;
+  final Widget screen;
+  final IconData icon;
+  final String label;
 }
