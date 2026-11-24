@@ -66,6 +66,13 @@ class RecyclingPickup {
   final String? citizenName;
   final String? citizenPhone;
   final double? citizenTrustScore;
+  /// El recolector asignado. Lo necesita la calificación mutua: hasta P-02 el
+  /// recojo describía al ciudadano y no decía nada de quien lo atiende.
+  /// No trae teléfono: el del ciudadano se expone porque el recolector tiene
+  /// que coordinar el retiro, y al revés no hay un motivo equivalente.
+  final String? recyclerId;
+  final String? recyclerName;
+  final double? recyclerTrustScore;
   final List<RecyclingPickupResult> results;
   final PickupCompensation? compensation;
   /// Materiales/pesos *estimados* por el ciudadano al publicar — es la
@@ -87,6 +94,9 @@ class RecyclingPickup {
     this.citizenName,
     this.citizenPhone,
     this.citizenTrustScore,
+    this.recyclerId,
+    this.recyclerName,
+    this.recyclerTrustScore,
     this.results = const [],
     this.compensation,
     this.listingMaterials = const [],
@@ -95,6 +105,7 @@ class RecyclingPickup {
   factory RecyclingPickup.fromJson(Map<String, dynamic> json) {
     final listing = json['listing'] as Map<String, dynamic>?;
     final citizen = listing?['citizen'] as Map<String, dynamic>?;
+    final recycler = json['recycler'] as Map<String, dynamic>?;
     return RecyclingPickup(
       id: json['id'] as String,
       status: json['status'] as String,
@@ -110,6 +121,9 @@ class RecyclingPickup {
       citizenName: citizen?['name'] as String?,
       citizenPhone: citizen?['phone'] as String?,
       citizenTrustScore: toDoubleOrNull(citizen?['trustScore']),
+      recyclerId: recycler?['id'] as String?,
+      recyclerName: recycler?['name'] as String?,
+      recyclerTrustScore: toDoubleOrNull(recycler?['trustScore']),
       results: ((json['results'] as List<dynamic>?) ?? [])
           .map((r) => RecyclingPickupResult.fromJson(r as Map<String, dynamic>))
           .toList(),

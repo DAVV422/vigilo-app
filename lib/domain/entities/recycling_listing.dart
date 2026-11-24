@@ -92,6 +92,12 @@ class RecyclingListing {
   final RecyclingListingCitizen? citizen;
   final String? pickupId;
   final String? pickupRecyclerId;
+  /// Nombre y reputación del recolector que atendió el recojo. Existen para
+  /// que la pantalla de calificación pueda decir a quién se está calificando
+  /// en vez de "el recolector". Opcionales: un backend anterior a P-02 no los
+  /// manda y la app tiene que seguir funcionando igual.
+  final String? pickupRecyclerName;
+  final double? pickupRecyclerTrustScore;
   final String? pickupStatus;
   /// Estado de la compensación del recojo asociado (PENDING_CONFIRMATION |
   /// CONFIRMED | DISPUTED). Solo viene poblado en `getMyListings()` — es lo
@@ -114,6 +120,8 @@ class RecyclingListing {
     this.citizen,
     this.pickupId,
     this.pickupRecyclerId,
+    this.pickupRecyclerName,
+    this.pickupRecyclerTrustScore,
     this.pickupStatus,
     this.pickupCompensationStatus,
     this.materials = const [],
@@ -138,6 +146,8 @@ class RecyclingListing {
           : null,
       pickupId: pickup?['id'] as String?,
       pickupRecyclerId: pickup?['recyclerId'] as String?,
+      pickupRecyclerName: pickup?['recyclerName'] as String?,
+      pickupRecyclerTrustScore: toDoubleOrNull(pickup?['recyclerTrustScore']),
       pickupStatus: pickup?['status'] as String?,
       pickupCompensationStatus: pickup?['compensationStatus'] as String?,
       materials: ((json['materials'] as List<dynamic>?) ?? [])
