@@ -30,11 +30,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   StreamSubscription<RemoteMessage>? _notificationTapSub;
 
+  /// Se guarda la referencia en vez de volver a pedirla en `dispose`, porque
+  /// Riverpod prohíbe usar `ref` cuando el widget ya se está desmontando
+  /// ("Using ref when a widget is about to or has been unmounted is unsafe").
+  /// No saltaba antes porque el dashboard nunca se quitaba del árbol: al
+  /// cerrar sesión la app se quedaba colgada en él. Al arreglar eso, este
+  /// `dispose` empezó a ejecutarse de verdad. Guardar la instancia es seguro
+  /// acá: `proximityNotifierProvider` cuelga del scope raíz y no es
+  /// autoDispose, así que vive más que esta pantalla.
+  ProximityNotifier? _proximity;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(proximityNotifierProvider.notifier).start();
+      if (!mounted) return;
+      _proximity = ref.read(proximityNotifierProvider.notifier);
+      _proximity!.start();
     });
     // En modo demo no hay Firebase inicializado (ver main.dart) — ni
     // siquiera se debe instanciar PushNotificationService, porque su
@@ -95,7 +107,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   void dispose() {
-    ref.read(proximityNotifierProvider.notifier).stop();
+    _proximity?.stop();
     _notificationTapSub?.cancel();
     super.dispose();
   }

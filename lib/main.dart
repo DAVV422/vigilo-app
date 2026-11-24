@@ -6,7 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/config/app_config.dart';
 import 'core/logging/app_logger.dart';
 import 'core/push/push_notification_service.dart';
+import 'domain/entities/user.dart';
+import 'presentation/providers/providers.dart';
 import 'presentation/screens/splash/splash_screen.dart';
+import 'screens/login_screen.dart';
 import 'theme/app_theme.dart';
 
 const _log = AppLogger('App');
@@ -59,13 +62,42 @@ Future<void> main() async {
   );
 }
 
-class VigiloApp extends StatelessWidget {
+/// Necesaria para poder navegar desde fuera del árbol de widgets: cuando la
+/// sesión se cae, quien se entera es un provider, no una pantalla.
+final _navigatorKey = GlobalKey<NavigatorState>();
+
+class VigiloApp extends ConsumerWidget {
   const VigiloApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Cuando la sesión termina hay que volver al login, y hasta ahora nadie
+    // lo hacía: `logout()` dejaba `authProvider` en null y `ProfileScreen`
+    // se quedaba mostrando su spinner de "todavía no sé quién sos" para
+    // siempre. La única salida era matar la app y abrirla de nuevo.
+    //
+    // La escucha vive acá, y no en la pantalla de perfil, porque el mismo
+    // final de sesión tiene dos caminos y los dos terminan en `state = null`:
+    // el logout explícito del usuario, y `forceLogoutLocally()`, que dispara
+    // `ApiClient` cuando ni el access ni el refresh token sirven ya. Ese
+    // segundo caso puede ocurrir en cualquier pantalla, así que resolverlo
+    // en una sola no alcanzaba.
+    //
+    // La condición es la *transición* de sesión a no-sesión. Un `next == null`
+    // a secas también se cumple mientras la app arranca y en la propia
+    // pantalla de login, y ahí no hay nada que hacer.
+    ref.listen<User?>(authProvider, (previous, next) {
+      if (previous != null && next == null) {
+        _navigatorKey.currentState?.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    });
+
     return MaterialApp(
       title: 'Vigilo',
+      navigatorKey: _navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       home: const SplashScreen(),
