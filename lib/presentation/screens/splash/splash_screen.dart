@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../theme/app_colors.dart';
+import '../../providers/providers.dart';
 import '../../../screens/login_screen.dart';
 import '../dashboard/dashboard_screen.dart';
 
@@ -19,26 +19,31 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     _checkSession();
   }
 
-  _checkSession() async {
-    // Retraso de 2.5 segundos como requiere UT-601
-    await Future.delayed(const Duration(milliseconds: 2500));
-    
-    final prefs = await SharedPreferences.getInstance();
-    final hasSession = prefs.getString('userEmail') != null;
+  Future<void> _checkSession() async {
+    // Dos esperas en paralelo, no en fila:
+    //
+    // - El splash se muestra un mínimo de 2,5 s (UT-601).
+    // - La restauración de sesión puede tardar más que eso: pide el perfil
+    //   y, si el access token venció —cosa habitual, dura 15 minutos—, el
+    //   interceptor lo renueva con el refresh token y reintenta. Son dos
+    //   viajes de red que en un arranque en frío no siempre entran en 2,5 s.
+    //
+    // Decidir a dónde ir antes de que eso termine es leer un estado que
+    // todavía no se sabe, y mandar al login a alguien que sí tenía sesión.
+    await Future.wait([
+      Future<void>.delayed(const Duration(milliseconds: 2500)),
+      ref.read(authProvider.notifier).ready,
+    ]);
 
-    if (mounted) {
-      if (hasSession) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
-      }
-    }
+    if (!mounted) return;
+
+    final hasSession = ref.read(authProvider) != null;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => hasSession ? const DashboardScreen() : const LoginScreen(),
+      ),
+    );
   }
 
   @override

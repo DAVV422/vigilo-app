@@ -162,12 +162,22 @@ class AuthNotifier extends Notifier<User?> {
   static const _log = AppLogger('Auth');
 
   bool _bootstrapped = false;
+  Future<void>? _restoring;
+
+  /// Se completa cuando terminó el intento de restaurar la sesión guardada.
+  ///
+  /// `build()` no puede ser asíncrono, así que la restauración arranca en
+  /// segundo plano y `state` queda en `null` hasta que responde. Quien
+  /// necesite decidir algo en función de si hay sesión —el splash— tiene
+  /// que esperar esto primero; mirar `state` antes es leer un `null` que
+  /// solo significa "todavía no sé".
+  Future<void> get ready => _restoring ?? Future<void>.value();
 
   @override
   User? build() {
     if (!_bootstrapped) {
       _bootstrapped = true;
-      _restoreSession();
+      _restoring = _restoreSession();
       // En modo demo no hay backend al que registrar un token, y evitamos
       // tocar Firebase del todo (ver main.dart) — nada que escuchar acá.
       if (!AppConfig.demoMode) {
