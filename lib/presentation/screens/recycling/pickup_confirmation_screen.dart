@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/entities/recycling_pickup.dart';
 import '../../../theme/app_colors.dart';
 import '../../providers/providers.dart';
+import '../../widgets/ratings/rate_pickup_sheet.dart';
 import '../../../../core/errors/describe_error.dart';
 import '../../../../core/logging/app_logger.dart';
 
@@ -87,6 +88,10 @@ class _PickupConfirmationScreenState extends ConsumerState<PickupConfirmationScr
           ),
         ),
       );
+      // La hoja va DESPUES del dialogo, no en su lugar: la confirmacion de
+      // que se acreditaron los puntos es lo que el usuario esta esperando, y
+      // pisarla con un pedido de calificacion hace que la lea a medias.
+      await _offerRating();
       if (mounted) Navigator.pop(context, true);
     } catch (e, st) {
       if (!mounted) return;
@@ -95,6 +100,23 @@ class _PickupConfirmationScreenState extends ConsumerState<PickupConfirmationScr
     } finally {
       if (mounted) setState(() => _isActing = false);
     }
+  }
+
+  /// Ofrece calificar al recolector. Nunca bloquea ni falla el flujo: si el
+  /// recojo no trae el id del recolector —backend anterior a P-02— se omite
+  /// en silencio, porque el usuario ya consiguio lo que vino a hacer.
+  Future<void> _offerRating() async {
+    final pickup = _pickup;
+    final recyclerId = pickup?.recyclerId;
+    if (!mounted || pickup == null || recyclerId == null) return;
+    await showRatePickupSheet(
+      context,
+      pickupId: pickup.id,
+      rateeId: recyclerId,
+      rateeName: pickup.recyclerName,
+      rateeTrustScore: pickup.recyclerTrustScore,
+      rateeIsRecycler: true,
+    );
   }
 
   Future<void> _dispute() async {

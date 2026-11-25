@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/entities/recycling_listing.dart';
 import '../../../theme/app_colors.dart';
 import '../../providers/providers.dart';
+import '../../widgets/ratings/rate_pickup_sheet.dart';
 import 'pickup_confirmation_screen.dart';
 import '../../../core/errors/describe_error.dart';
 import '../../../core/logging/app_logger.dart';
@@ -21,6 +22,13 @@ class MyListingsScreen extends ConsumerStatefulWidget {
 class _MyListingsScreenState extends ConsumerState<MyListingsScreen> {
   static const _log = AppLogger('MisPublicaciones');
   List<RecyclingListing> _listings = [];
+
+  /// Recojos que este usuario ya calificó, para no volver a ofrecérselos.
+  /// Sale de `GET /ratings/mine`: el servidor es quien lo sabe, no el
+  /// teléfono. Guardarlo localmente habría sido más barato pero el dato es
+  /// del usuario, y quien reinstala volvería a ver tarjetas de recojos que
+  /// ya calificó.
+  Set<String> _ratedPickupIds = {};
   bool _isLoading = true;
   String? _error;
 
@@ -36,10 +44,15 @@ class _MyListingsScreenState extends ConsumerState<MyListingsScreen> {
       _error = null;
     });
     try {
-      final listings = await ref.read(recyclingRepositoryProvider).getMyListings();
+      // En paralelo: una no depende de la otra y son dos viajes de red.
+      final (listings, rated) = await (
+        ref.read(recyclingRepositoryProvider).getMyListings(),
+        _loadRatedPickupIds(),
+      ).wait;
       if (!mounted) return;
       setState(() {
         _listings = listings;
+        _ratedPickupIds = rated;
         _isLoading = false;
       });
     } catch (e, st) {
@@ -91,6 +104,82 @@ class _MyListingsScreenState extends ConsumerState<MyListingsScreen> {
           : _error != null
               ? _buildError(_error!)
               : _buildList(),
+    );
+  }
+
+  /// Nunca hace fallar la pantalla: si no se pueden leer las calificaciones
+  /// emitidas, lo peor que pasa es que se ofrezca calificar algo ya
+  /// calificado, y ahí el 409 del servidor lo resuelve con un aviso.
+  Future<Set<String>> _loadRatedPickupIds() async {
+    try {
+      final mine = await ref.read(ratingsRepositoryProvider).getMyRatings();
+      return mine.map((r) => r.contextId).toSet();
+    } catch (e) {
+      _log.warning('No se pudieron leer las calificaciones emitidas: $e');
+      return {};
+    }
+  }
+
+  /// El recojo terminó y todavía no lo calificó.
+  ///
+  /// Se omite mientras la publicación esté esperando confirmación: ahí hay
+  /// algo más urgente que hacer, y al confirmar ya aparece la hoja sola.
+  /// Ofrecer las dos cosas en la misma tarjeta compite consigo misma y
+  /// termina en un 409 cuando el usuario hace las dos.
+  bool _canRate(RecyclingListing listing) {
+    final pickupId = listing.pickupId;
+    return pickupId != null &&
+        listing.pickupRecyclerId != null &&
+        listing.pickupStatus == 'COMPLETED' &&
+        !_needsConfirmation(listing) &&
+        !_ratedPickupIds.contains(pickupId);
+  }
+
+  Future<void> _rate(RecyclingListing listing) async {
+    final done = await showRatePickupSheet(
+      context,
+      pickupId: listing.pickupId!,
+      rateeId: listing.pickupRecyclerId!,
+      rateeName: listing.pickupRecyclerName,
+      rateeTrustScore: listing.pickupRecyclerTrustScore,
+      rateeIsRecycler: true,
+    );
+    // Se agrega en memoria en vez de recargar todo: la tarjeta desaparece al
+    // instante y nos ahorramos dos peticiones.
+    if (done == true && mounted) {
+      setState(() => _ratedPickupIds = {..._ratedPickupIds, listing.pickupId!});
+    }
+  }
+
+  Widget _buildRateCard(RecyclingListing listing) {
+    final who = listing.pickupRecyclerName ?? 'el recolector';
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.primaryContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.star_outline_rounded, color: AppColors.onPrimaryContainer),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Contanos cómo te fue con $who',
+              style: const TextStyle(fontSize: 13, color: AppColors.onPrimaryContainer),
+            ),
+          ),
+          TextButton(
+            onPressed: () => _rate(listing),
+            // Color explícito: `primaryContainer` es verde oscuro en este
+            // tema, y el verde por defecto del TextButton queda ilegible
+            // encima.
+            style: TextButton.styleFrom(foregroundColor: AppColors.onPrimaryContainer),
+            child: const Text('Calificar'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -172,6 +261,7 @@ class _MyListingsScreenState extends ConsumerState<MyListingsScreen> {
                       if (actionable) const Icon(Icons.chevron_right, color: AppColors.warning, size: 18),
                     ],
                   ),
+                  if (_canRate(listing)) _buildRateCard(listing),
                 ],
               ),
             ),

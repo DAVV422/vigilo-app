@@ -7,6 +7,7 @@ import '../domain/entities/recycling_pickup.dart';
 import '../domain/entities/user.dart';
 import '../presentation/providers/providers.dart';
 import '../presentation/screens/recycling/pickup_detail_screen.dart';
+import '../presentation/widgets/ratings/rate_pickup_sheet.dart';
 import '../theme/app_colors.dart';
 import '../widgets/main_app_bar.dart';
 
@@ -23,6 +24,11 @@ class CollectionsScreen extends ConsumerStatefulWidget {
 
 class _CollectionsScreenState extends ConsumerState<CollectionsScreen> {
   List<RecyclingPickup> _activePickups = [];
+
+  /// Recojos ya terminados que este recolector todavía no calificó. Sale de
+  /// cruzar su historial con `GET /ratings/mine`, porque quien cerró la app
+  /// sin calificar necesita poder volver.
+  List<RecyclingPickup> _pendingRating = [];
   List<RecyclingListing> _nearbyListings = [];
   CitizenSummary? _summary;
   bool _isLoading = true;
@@ -55,12 +61,20 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> {
               radiusKm: 10,
             ),
         ref.read(analyticsRepositoryProvider).getCitizenSummary(),
+        ref.read(recyclingRepositoryProvider).getMyPickups(filter: 'history'),
       ]);
+      final rated = await _loadRatedPickupIds();
       if (!mounted) return;
       setState(() {
         _activePickups = results[0] as List<RecyclingPickup>;
         _nearbyListings = results[1] as List<RecyclingListing>;
         _summary = results[2] as CitizenSummary;
+        _pendingRating = (results[3] as List<RecyclingPickup>)
+            .where((p) =>
+                p.status == 'COMPLETED' &&
+                p.citizenId != null &&
+                !rated.contains(p.id))
+            .toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -111,6 +125,7 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> {
                           const SizedBox(height: 20),
                           _buildActivePickups(),
                           const SizedBox(height: 24),
+                          _buildPendingRatings(),
                           const Text(
                             'Publicaciones cercanas disponibles',
                             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.onSurface),
@@ -125,6 +140,74 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> {
                         ],
                       ),
                     ),
+    );
+  }
+
+  /// Si falla, se devuelve vacío: lo peor que pasa es ofrecer calificar algo
+  /// ya calificado, y ahí el 409 del servidor lo resuelve con un aviso.
+  Future<Set<String>> _loadRatedPickupIds() async {
+    try {
+      final mine = await ref.read(ratingsRepositoryProvider).getMyRatings();
+      return mine.map((r) => r.contextId).toSet();
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> _rate(RecyclingPickup pickup) async {
+    final done = await showRatePickupSheet(
+      context,
+      pickupId: pickup.id,
+      rateeId: pickup.citizenId!,
+      rateeName: pickup.citizenName,
+      rateeTrustScore: pickup.citizenTrustScore,
+      rateeIsRecycler: false,
+    );
+    // Se saca de la lista en memoria en vez de recargar la pantalla entera.
+    if (done == true && mounted) {
+      setState(() => _pendingRating =
+          _pendingRating.where((p) => p.id != pickup.id).toList());
+    }
+  }
+
+  Widget _buildPendingRatings() {
+    if (_pendingRating.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Pendientes de calificar',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.onSurface),
+        ),
+        const SizedBox(height: 12),
+        for (final pickup in _pendingRating)
+          Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.primaryContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.star_outline_rounded, color: AppColors.onPrimaryContainer),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Contanos cómo te fue con ${pickup.citizenName ?? 'el ciudadano'}',
+                    style: const TextStyle(fontSize: 13, color: AppColors.onPrimaryContainer),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => _rate(pickup),
+                  style: TextButton.styleFrom(foregroundColor: AppColors.onPrimaryContainer),
+                  child: const Text('Calificar'),
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: 12),
+      ],
     );
   }
 

@@ -6,6 +6,7 @@ import '../../../domain/entities/recycling_pickup.dart';
 import '../../../domain/repositories/recycling_repository.dart';
 import '../../../theme/app_colors.dart';
 import '../../providers/providers.dart';
+import '../../widgets/ratings/rate_pickup_sheet.dart';
 import '../../../../core/errors/describe_error.dart';
 import '../../../../core/logging/app_logger.dart';
 
@@ -69,6 +70,21 @@ class _PickupWeighInScreenState extends ConsumerState<PickupWeighInScreen> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
     if (picked != null) setState(() => _voucherImage = picked);
+  }
+
+  /// Ofrece calificar al ciudadano. Si el recojo no trae su id se omite:
+  /// el pesaje ya quedo registrado y eso es lo que importaba.
+  Future<void> _offerRating() async {
+    final citizenId = widget.pickup.citizenId;
+    if (!mounted || citizenId == null) return;
+    await showRatePickupSheet(
+      context,
+      pickupId: widget.pickup.id,
+      rateeId: citizenId,
+      rateeName: widget.pickup.citizenName,
+      rateeTrustScore: widget.pickup.citizenTrustScore,
+      rateeIsRecycler: false,
+    );
   }
 
   void _showError(String message) {
@@ -143,6 +159,9 @@ class _PickupWeighInScreenState extends ConsumerState<PickupWeighInScreen> {
           ),
         ),
       );
+      // `completePickup` deja el recojo en COMPLETED, que es justo lo que
+      // `POST /ratings` exige, asi que el recolector ya puede calificar.
+      await _offerRating();
       if (mounted) Navigator.pop(context, true);
     } catch (e, st) {
       final message = describeError(e, st, log: _log, operation: 'registrar el pesaje', whereToCheck: 'Mis Recojos');
