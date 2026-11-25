@@ -93,6 +93,22 @@ class LocalJsonDatasource {
 
     // ===================== USUARIOS =====================
     final users = [
+      // --- Personal de la plataforma ---
+      // Existe para poder probar la superficie de gestión en modo demo. Sin
+      // esta cuenta, la pestaña Gestión no se puede abrir sin backend.
+      UserModel(
+        id: 'u10',
+        name: 'Carlos',
+        lastName: 'Antelo',
+        username: '@carlos_a',
+        phone: '77218450',
+        email: 'admin@vigilo.bo',
+        password: '12345678',
+        avatarUrl: 'C',
+        points: 0,
+        roles: [UserRole.admin],
+      ),
+
       // --- Ciudadanos normales ---
       UserModel(
         id: 'u1',

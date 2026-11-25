@@ -10,6 +10,7 @@ import '../../../theme/app_colors.dart';
 import '../../../theme/app_icons.dart';
 import '../../../domain/entities/user.dart';
 import '../../../screens/collections_screen.dart';
+import '../admin/admin_home_screen.dart';
 import '../alerts/alerts_screen.dart';
 import '../map/home_map_screen.dart';
 import '../profile/profile_screen.dart';
@@ -125,10 +126,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   /// que pertenecer ni una zona asignada.
   List<_TabSpec> _tabsFor(List<UserRole> roles) {
     final isRecycler = roles.contains(UserRole.recycling);
+    final isStaff =
+        roles.contains(UserRole.admin) || roles.contains(UserRole.moderator);
     // Sin roles se asume ciudadano: si el backend devolviera una lista vacía
     // —por ejemplo con todos los roles en PENDING— es preferible una app
-    // usable a una barra con dos pestañas.
-    final isCitizen = roles.contains(UserRole.normal) || !isRecycler;
+    // usable a una barra con dos pestañas. Pero el personal queda excluido:
+    // el admin semilla no tiene rol CITIZEN y no tiene sentido ofrecerle
+    // Alertas y Tienda, que son flujos de vecino.
+    final isCitizen =
+        roles.contains(UserRole.normal) || (!isRecycler && !isStaff);
 
     return [
       const _TabSpec(AppTab.map, HomeMapScreen(), AppIcons.map, 'Mapa'),
@@ -144,7 +150,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           // titulándose 'Mis recolecciones'; acá importa que se lea.
           'Material',
         ),
-      const _TabSpec(AppTab.store, StoreScreen(), AppIcons.store, 'Tienda'),
+      if (isCitizen || isRecycler)
+        const _TabSpec(AppTab.store, StoreScreen(), AppIcons.store, 'Tienda'),
+      // Antes de Perfil y no al final: es la razón por la que esa persona
+      // abre la app.
+      if (isStaff)
+        const _TabSpec(AppTab.admin, AdminHomeScreen(), AppIcons.tune, 'Gestión'),
       const _TabSpec(AppTab.profile, ProfileScreen(), AppIcons.person, 'Perfil'),
     ];
   }

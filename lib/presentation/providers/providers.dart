@@ -350,7 +350,7 @@ final selectedIncidentProvider =
 /// ciudadano es Recolecciones, y el índice 3 es Perfil con cuatro pestañas
 /// y Tienda con cinco. Guardar un entero hacía que `setIndex(3)` llevara a
 /// destinos distintos según quién hubiera iniciado sesión.
-enum AppTab { map, alerts, collections, store, profile }
+enum AppTab { map, alerts, collections, store, admin, profile }
 
 class NavTabNotifier extends Notifier<AppTab> {
   @override
