@@ -26,6 +26,15 @@ abstract class StoreRepository {
   /// Edición parcial: solo viaja lo que no sea nulo. Activar y desactivar
   /// no necesitan método propio, son un `active` acá.
   Future<StoreProduct> updateProduct(String id, ProductInput input);
+
+  // --- Mostrador (ADMIN, MODERATOR) ---
+
+  /// Busca un canje por el código que presenta la persona. Lanza
+  /// `ApiException` 404 si no existe.
+  Future<Redemption> findRedemptionByCode(String code);
+
+  /// Marca el canje como entregado. No se deshace.
+  Future<void> fulfillRedemption(String id);
 }
 
 /// Datos de un producto para crear o editar.

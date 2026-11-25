@@ -55,4 +55,12 @@ class RemoteStoreRepositoryImpl implements StoreRepository {
   Future<StoreProduct> updateProduct(String id, ProductInput input) async {
     return StoreProduct.fromJson(await _datasource.updateProduct(id, input.toJson()));
   }
+
+  @override
+  Future<Redemption> findRedemptionByCode(String code) async {
+    return Redemption.fromJson(await _datasource.findRedemptionByCode(code));
+  }
+
+  @override
+  Future<void> fulfillRedemption(String id) => _datasource.fulfillRedemption(id);
 }

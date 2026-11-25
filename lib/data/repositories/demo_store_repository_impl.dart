@@ -140,6 +140,44 @@ class DemoStoreRepositoryImpl implements StoreRepository {
   }
 
   @override
+  Future<Redemption> findRedemptionByCode(String code) async {
+    final normalized = code.trim().toUpperCase();
+    final match = _state.redemptions.where((r) => r.code == normalized);
+    if (match.isEmpty) {
+      throw ApiException(
+        statusCode: 404,
+        message: 'No existe ningún canje con el código $normalized',
+      );
+    }
+    return match.first;
+  }
+
+  @override
+  Future<void> fulfillRedemption(String id) async {
+    final index = _state.redemptions.indexWhere((r) => r.id == id);
+    if (index == -1) {
+      throw ApiException(statusCode: 404, message: 'Canje no encontrado.');
+    }
+    final current = _state.redemptions[index];
+    if (current.status == 'FULFILLED') {
+      throw ApiException(statusCode: 409, message: 'Este canje ya fue entregado.');
+    }
+    _state.redemptions[index] = Redemption(
+      id: current.id,
+      productId: current.productId,
+      productName: current.productName,
+      productImageUrl: current.productImageUrl,
+      pointsSpent: current.pointsSpent,
+      code: current.code,
+      status: 'FULFILLED',
+      createdAt: current.createdAt,
+      fulfilledAt: DateTime.now(),
+      userName: current.userName,
+    );
+    _log.info('Canje demo entregado: ${current.code}');
+  }
+
+  @override
   Future<StoreProduct> updateProduct(String id, ProductInput input) async {
     final products = await _readProducts();
     final index = products.indexWhere((p) => p.id == id);

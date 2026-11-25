@@ -10,6 +10,11 @@ class Redemption {
   final DateTime createdAt;
   final DateTime? fulfilledAt;
 
+  /// Quién hizo el canje. Nulo en `my-redemptions`, donde siempre es uno
+  /// mismo; lo trae la búsqueda por código, porque quien atiende el
+  /// mostrador necesita saber a quién le está entregando.
+  final String? userName;
+
   Redemption({
     required this.id,
     required this.productId,
@@ -20,10 +25,12 @@ class Redemption {
     required this.status,
     required this.createdAt,
     this.fulfilledAt,
+    this.userName,
   });
 
   factory Redemption.fromJson(Map<String, dynamic> json) {
     final product = json['product'] as Map<String, dynamic>?;
+    final user = json['user'] as Map<String, dynamic>?;
     return Redemption(
       id: json['id'] as String,
       productId: json['productId'] as String,
@@ -34,6 +41,9 @@ class Redemption {
       status: json['status'] as String,
       createdAt: DateTime.parse(json['createdAt'] as String),
       fulfilledAt: json['fulfilledAt'] != null ? DateTime.parse(json['fulfilledAt'] as String) : null,
+      userName: user == null
+          ? null
+          : '${user['firstName'] ?? ''} ${user['lastName'] ?? ''}'.trim(),
     );
   }
 }

@@ -59,6 +59,26 @@ class RemoteStoreDatasource {
     }
   }
 
+  Future<Map<String, dynamic>> findRedemptionByCode(String code) async {
+    try {
+      final res = await _client.raw.get(
+        '/store/redemptions',
+        queryParameters: {'code': code},
+      );
+      return res.data['data'] as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw _client.toApiException(e);
+    }
+  }
+
+  Future<void> fulfillRedemption(String id) async {
+    try {
+      await _client.raw.post('/store/redemptions/$id/fulfill');
+    } on DioException catch (e) {
+      throw _client.toApiException(e);
+    }
+  }
+
   Future<List<dynamic>> getMyRedemptions() async {
     try {
       final res = await _client.raw.get('/store/my-redemptions');

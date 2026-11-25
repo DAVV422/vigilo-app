@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/entities/user.dart';
 import '../../../theme/app_colors.dart';
 import '../../providers/providers.dart';
+import 'admin_fulfill_redemption_screen.dart';
 import 'admin_products_screen.dart';
 import 'widgets/admin_scaffold.dart';
 
@@ -32,6 +33,7 @@ class _Section {
 }
 
 Widget _buildProducts(BuildContext _) => const AdminProductsScreen();
+Widget _buildFulfill(BuildContext _) => const AdminFulfillRedemptionScreen();
 
 class AdminHomeScreen extends ConsumerWidget {
   const AdminHomeScreen({super.key});
@@ -52,6 +54,7 @@ class AdminHomeScreen extends ConsumerWidget {
           subtitle: 'Buscar un código y marcarlo como entregado',
           icon: Icons.qr_code_scanner_outlined,
           allowedRoles: _staff,
+          builder: _buildFulfill,
         ),
         _Section(
           title: 'Disputas',
