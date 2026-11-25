@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/entities/user.dart';
 import '../../../theme/app_colors.dart';
 import '../../providers/providers.dart';
+import 'admin_disputes_screen.dart';
 import 'admin_fulfill_redemption_screen.dart';
 import 'admin_products_screen.dart';
 import 'widgets/admin_scaffold.dart';
@@ -34,6 +35,7 @@ class _Section {
 
 Widget _buildProducts(BuildContext _) => const AdminProductsScreen();
 Widget _buildFulfill(BuildContext _) => const AdminFulfillRedemptionScreen();
+Widget _buildDisputes(BuildContext _) => const AdminDisputesScreen();
 
 class AdminHomeScreen extends ConsumerWidget {
   const AdminHomeScreen({super.key});
@@ -61,6 +63,7 @@ class AdminHomeScreen extends ConsumerWidget {
           subtitle: 'Revisar y resolver reclamos de pesaje',
           icon: Icons.gavel_outlined,
           allowedRoles: _staff,
+          builder: _buildDisputes,
         ),
         _Section(
           title: 'Materiales y precios',
