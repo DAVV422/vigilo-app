@@ -58,7 +58,10 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
 
   Future<void> _fetchInitialLocation() async {
     try {
-      final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      final position = await Geolocator.getCurrentPosition(
+        // Misma forma que `recycle_form_screen`, que ya usaba la API nueva.
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
       setState(() {
         _selectedLocation = LatLng(position.latitude, position.longitude);
       });
@@ -420,7 +423,7 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
                           borderRadius: BorderRadius.circular(100),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withValues(alpha: 0.1),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -451,7 +454,7 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
-                          color: AppColors.surfaceContainerLowest.withOpacity(0.9),
+                          color: AppColors.surfaceContainerLowest.withValues(alpha: 0.9),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -562,7 +565,7 @@ class GridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.outlineVariant.withOpacity(0.3)
+      ..color = AppColors.outlineVariant.withValues(alpha: 0.3)
       ..strokeWidth = 1;
     
     for (double i = 0; i < size.width; i += 20) {

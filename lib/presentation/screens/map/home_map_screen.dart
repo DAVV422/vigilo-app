@@ -61,7 +61,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
           border: isSelected ? null : Border.all(color: Colors.grey.shade200),
           boxShadow: isSelected ? [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.3),
+              color: AppColors.primary.withValues(alpha: 0.3),
               blurRadius: 8,
               offset: const Offset(0, 2),
             )
@@ -507,8 +507,8 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                       point: _currentLocation,
                       radius: 200,
                       useRadiusInMeter: true,
-                      color: AppColors.primary.withOpacity(0.06),
-                      borderColor: AppColors.primary.withOpacity(0.3),
+                      color: AppColors.primary.withValues(alpha: 0.06),
+                      borderColor: AppColors.primary.withValues(alpha: 0.3),
                       borderStrokeWidth: 2,
                     ),
                     // Onda pulsante expansiva temporal
@@ -517,8 +517,8 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                         point: _currentLocation,
                         radius: _radarPulseRadius,
                         useRadiusInMeter: true,
-                        color: AppColors.primary.withOpacity(0.18 * (1.0 - _radarPulseRadius / 200.0)),
-                        borderColor: AppColors.primary.withOpacity(0.45 * (1.0 - _radarPulseRadius / 200.0)),
+                        color: AppColors.primary.withValues(alpha: 0.18 * (1.0 - _radarPulseRadius / 200.0)),
+                        borderColor: AppColors.primary.withValues(alpha: 0.45 * (1.0 - _radarPulseRadius / 200.0)),
                         borderStrokeWidth: 1.5,
                       ),
                   ],
@@ -635,7 +635,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                                           borderRadius: BorderRadius.circular(12),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black.withOpacity(0.05),
+                                              color: Colors.black.withValues(alpha: 0.05),
                                               blurRadius: 8,
                                               offset: const Offset(0, 2),
                                             ),
@@ -663,7 +663,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                                         borderRadius: BorderRadius.circular(12),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withOpacity(0.05),
+                                            color: Colors.black.withValues(alpha: 0.05),
                                             blurRadius: 8,
                                             offset: const Offset(0, 2),
                                           ),
@@ -906,7 +906,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
           boxShadow: [
             if (_isSidebarOpen)
               BoxShadow(
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
                 blurRadius: 15,
                 offset: const Offset(4, 0),
               ),
@@ -1148,9 +1148,9 @@ class _HeroLocationMarkerWidgetState extends State<HeroLocationMarkerWidget> wit
               height: 30 + (30 * _controller.value),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.primary.withOpacity(0.3 * (1.0 - _controller.value)),
+                color: AppColors.primary.withValues(alpha: 0.3 * (1.0 - _controller.value)),
                 border: Border.all(
-                  color: AppColors.primary.withOpacity(0.5 * (1.0 - _controller.value)),
+                  color: AppColors.primary.withValues(alpha: 0.5 * (1.0 - _controller.value)),
                   width: 1.5,
                 ),
               ),
@@ -1169,7 +1169,7 @@ class _HeroLocationMarkerWidgetState extends State<HeroLocationMarkerWidget> wit
                 border: Border.all(color: Colors.white, width: 2.5),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.6),
+                    color: AppColors.primary.withValues(alpha: 0.6),
                     blurRadius: 8,
                     spreadRadius: 2,
                     offset: const Offset(0, 2),
@@ -1345,9 +1345,9 @@ class _PulsingMarkerWidgetState extends State<PulsingMarkerWidget> with TickerPr
                 height: 32 + (28 * _pulseAnimation.value),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: widget.color.withOpacity(0.35 * (1.0 - _pulseAnimation.value)),
+                  color: widget.color.withValues(alpha: 0.35 * (1.0 - _pulseAnimation.value)),
                   border: Border.all(
-                    color: widget.color.withOpacity(0.5 * (1.0 - _pulseAnimation.value)),
+                    color: widget.color.withValues(alpha: 0.5 * (1.0 - _pulseAnimation.value)),
                     width: 1.5,
                   ),
                 ),
@@ -1432,7 +1432,7 @@ class CompassWidget extends StatelessWidget {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
+              color: Colors.black.withValues(alpha: 0.15),
               blurRadius: 6,
               offset: const Offset(0, 3),
             ),

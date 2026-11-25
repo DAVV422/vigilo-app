@@ -177,7 +177,7 @@ class IncidentDetailModal extends ConsumerWidget {
               children: [
                 Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
                   child: Icon(typeIcon, color: typeColor),
                 ),
                 const SizedBox(width: 16),
@@ -197,7 +197,7 @@ class IncidentDetailModal extends ConsumerWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: typeColor.withOpacity(0.1),
+                              color: typeColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(typeLabel, style: TextStyle(color: typeColor, fontSize: 12)),
@@ -222,7 +222,7 @@ class IncidentDetailModal extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.1),
+                  color: AppColors.success.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -282,9 +282,9 @@ class IncidentDetailModal extends ConsumerWidget {
                         margin: const EdgeInsets.only(bottom: 16),
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: AppColors.secondary.withOpacity(0.08),
+                          color: AppColors.secondary.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.secondary.withOpacity(0.25), width: 1),
+                          border: Border.all(color: AppColors.secondary.withValues(alpha: 0.25), width: 1),
                         ),
                         child: Row(
                           children: [

@@ -62,9 +62,9 @@ class ReportBottomSheet extends StatelessWidget {
             width: 70,
             height: 70,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: color.withOpacity(0.3), width: 2),
+              border: Border.all(color: color.withValues(alpha: 0.3), width: 2),
             ),
             child: Icon(icon, color: color, size: 32),
           ),

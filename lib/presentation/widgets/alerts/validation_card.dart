@@ -163,7 +163,7 @@ class ValidationCard extends StatelessWidget {
                   child: Container(
                     height: 44,
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceContainerHighest.withOpacity(0.5),
+                      color: AppColors.surfaceContainerHighest.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
