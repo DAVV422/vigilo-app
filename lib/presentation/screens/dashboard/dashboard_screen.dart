@@ -139,7 +139,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           AppTab.collections,
           CollectionsScreen(),
           AppIcons.recycling,
-          'Recolecciones',
+          // 'Recolecciones' no entra: con cinco pestañas cada una tiene unos
+          // 216px y se truncaba a 'Recolecci…'. La pantalla sigue
+          // titulándose 'Mis recolecciones'; acá importa que se lea.
+          'Material',
         ),
       const _TabSpec(AppTab.store, StoreScreen(), AppIcons.store, 'Tienda'),
       const _TabSpec(AppTab.profile, ProfileScreen(), AppIcons.person, 'Perfil'),
