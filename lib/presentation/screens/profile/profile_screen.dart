@@ -4,6 +4,7 @@ import '../../../domain/entities/user.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_icons.dart';
 import '../../providers/providers.dart';
+import 'user_ratings_screen.dart';
 import '../../../widgets/main_app_bar.dart';
 import '../../../../core/errors/describe_error.dart';
 import '../../../../core/logging/app_logger.dart';
@@ -235,7 +236,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Widget _buildTrustScoreCard(dynamic user) {
     return _card(
-      child: Row(
+      child: InkWell(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => UserRatingsScreen(
+              userId: user.id as String,
+              displayName: 'Mi reputación',
+            ),
+          ),
+        ),
+        child: Row(
         children: [
           Container(
             width: 44,
@@ -259,7 +270,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ],
             ),
           ),
-        ],
+            const Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant, size: 18),
+          ],
+        ),
       ),
     );
   }

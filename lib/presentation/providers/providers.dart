@@ -49,6 +49,7 @@ import '../../domain/repositories/incident_repository.dart';
 import '../../domain/repositories/media_repository.dart';
 import '../../domain/repositories/notifications_repository.dart';
 import '../../domain/repositories/points_repository.dart';
+import '../../domain/entities/rating.dart';
 import '../../domain/repositories/ratings_repository.dart';
 import '../../domain/repositories/recycling_repository.dart';
 import '../../domain/repositories/store_repository.dart';
@@ -127,6 +128,13 @@ final ratingsRepositoryProvider = Provider<RatingsRepository>((ref) {
   }
   final client = ref.watch(apiClientProvider);
   return RemoteRatingsRepositoryImpl(RemoteRatingsDatasource(client));
+});
+
+/// Reputación de un usuario. `family` porque la misma pantalla sirve para el
+/// perfil propio y para mirar al otro lado de un recojo.
+final userRatingsProvider =
+    FutureProvider.family<UserRatings, String>((ref, userId) {
+  return ref.watch(ratingsRepositoryProvider).getUserRatings(userId);
 });
 
 final mediaRepositoryProvider = Provider<MediaRepository>((ref) {
