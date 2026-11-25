@@ -30,7 +30,7 @@ class RemoteNotificationsDatasource {
     try {
       final res = await _client.raw.get(
         '/notifications',
-        queryParameters: {if (unreadOnly != null) 'unreadOnly': unreadOnly},
+        queryParameters: {'unreadOnly': ?unreadOnly},
       );
       return res.data['data'] as List<dynamic>;
     } on DioException catch (e) {

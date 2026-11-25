@@ -1,9 +1,7 @@
 // lib/presentation/screens/alerts/alerts_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:latlong2/latlong.dart';
 import '../../../theme/app_colors.dart';
-import '../../../theme/app_icons.dart';
 import '../../widgets/alerts/alert_card.dart';
 import '../../widgets/alerts/category_filter_row.dart';
 import '../../widgets/alerts/create_alert_sheet.dart';
@@ -14,7 +12,7 @@ import '../../../domain/entities/incident.dart';
 import '../../../widgets/main_app_bar.dart';
 
 class AlertsScreen extends ConsumerStatefulWidget {
-  const AlertsScreen({Key? key}) : super(key: key);
+  const AlertsScreen({super.key});
 
   @override
   ConsumerState<AlertsScreen> createState() => _AlertsScreenState();

@@ -1,24 +1,17 @@
 import 'dart:math' as math;
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../../domain/entities/incident.dart';
-import '../../../domain/entities/user.dart';
 import '../../../domain/repositories/incident_repository.dart' show IncidentVote;
 import '../../providers/providers.dart';
 import '../../../theme/app_colors.dart';
 import '../../../widgets/widgets.dart';
 import '../../widgets/report/report_modal_dialog.dart';
-import '../report/new_report_screen.dart';
-import '../../../screens/publish_material_screen.dart';
-import '../../../widgets/report_bottom_sheet.dart';
-import '../../../widgets/incident_detail_modal.dart';
 import '../../../screens/store_screen.dart';
 import '../../../screens/points_screen.dart';
-import '../alerts/confirm_alerts_screen.dart';
 import '../../../screens/kpi_screen.dart';
 import '../../../screens/impact_screen.dart';
 import '../../../screens/collections_screen.dart';
@@ -45,18 +38,18 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
   bool _isLocating = true;
 
   // Filtros activos
-  Set<IncidentType> _activeTypes = {
+  final Set<IncidentType> _activeTypes = {
     IncidentType.insecurity,
     IncidentType.trash,
     IncidentType.weeds,
     IncidentType.recycling,
   };
-  Set<String> _activeSeverities = {'Baja', 'Media', 'Alta', 'Crítica'};
-  Set<String> _activeStatuses = {'Recibido', 'En revisión', 'En gestión', 'Rechazado', 'Vencido'};
+  final Set<String> _activeSeverities = {'Baja', 'Media', 'Alta', 'Crítica'};
+  final Set<String> _activeStatuses = {'Recibido', 'En revisión', 'En gestión', 'Rechazado', 'Vencido'};
 
   bool _isFilterViewActive = false;
   String _selectedMainFilter = 'Todos';
-  String _selectedSubFilter = '';
+  final String _selectedSubFilter = '';
 
   Widget _buildFilterChip(String label, bool isSelected, VoidCallback onTap) {
     return GestureDetector(

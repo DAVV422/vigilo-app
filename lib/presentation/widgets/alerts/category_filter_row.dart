@@ -8,10 +8,10 @@ class CategoryFilterRow extends StatelessWidget {
   final ValueChanged<AlertCategory?> onCategorySelected;
 
   const CategoryFilterRow({
-    Key? key,
+    super.key,
     required this.selectedCategory,
     required this.onCategorySelected,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +73,7 @@ class CategoryFilterRow extends StatelessWidget {
                 ),
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );

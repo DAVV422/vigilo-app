@@ -54,8 +54,8 @@ class RemoteIncidentDatasource {
           'latitude': latitude,
           'longitude': longitude,
           'radiusKm': radiusKm,
-          if (type != null) 'type': type,
-          if (status != null) 'status': status,
+          'type': ?type,
+          'status': ?status,
         },
       );
       return res.data['data'] as List<dynamic>;
@@ -81,7 +81,7 @@ class RemoteIncidentDatasource {
     try {
       await _client.raw.post(
         '/incidents/$incidentId/validate',
-        data: {'vote': vote, if (comment != null) 'comment': comment},
+        data: {'vote': vote, 'comment': ?comment},
       );
     } on DioException catch (e) {
       throw _client.toApiException(e);

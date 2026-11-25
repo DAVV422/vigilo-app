@@ -37,7 +37,7 @@ class RemoteRecyclingDatasource {
           'latitude': latitude,
           'longitude': longitude,
           'radiusKm': radiusKm,
-          if (materialTypeId != null) 'materialTypeId': materialTypeId,
+          'materialTypeId': ?materialTypeId,
         },
       );
       return res.data['data'] as List<dynamic>;
@@ -85,7 +85,7 @@ class RemoteRecyclingDatasource {
     try {
       final res = await _client.raw.get(
         '/recycling/pickups/my-pickups',
-        queryParameters: {if (filter != null) 'filter': filter},
+        queryParameters: {'filter': ?filter},
       );
       return res.data['data'] as List<dynamic>;
     } on DioException catch (e) {
@@ -112,7 +112,7 @@ class RemoteRecyclingDatasource {
         '/recycling/pickups/$pickupId/status',
         data: {
           'status': status,
-          if (cancellationReason != null) 'cancellationReason': cancellationReason,
+          'cancellationReason': ?cancellationReason,
         },
       );
       return res.data['data'] as Map<String, dynamic>;
@@ -135,9 +135,9 @@ class RemoteRecyclingDatasource {
         data: {
           'results': results,
           'paymentMethod': paymentMethod,
-          if (grossAmount != null) 'grossAmount': grossAmount,
-          if (voucherMediaId != null) 'voucherMediaId': voucherMediaId,
-          if (notes != null) 'notes': notes,
+          'grossAmount': ?grossAmount,
+          'voucherMediaId': ?voucherMediaId,
+          'notes': ?notes,
         },
       );
       return res.data['data'] as Map<String, dynamic>;

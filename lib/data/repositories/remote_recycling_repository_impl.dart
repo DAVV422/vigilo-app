@@ -31,7 +31,7 @@ class RemoteRecyclingRepositoryImpl implements RecyclingRepository {
       'latitude': latitude,
       'longitude': longitude,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
-      if (photoMediaId != null) 'photoMediaId': photoMediaId,
+      'photoMediaId': ?photoMediaId,
       'materials': materials
           .map((m) => {
                 'materialTypeId': m.materialTypeId,

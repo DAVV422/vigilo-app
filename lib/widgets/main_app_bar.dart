@@ -7,9 +7,9 @@ class MainAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final String title;
 
   const MainAppBar({
-    Key? key,
+    super.key,
     required this.title,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

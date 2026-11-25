@@ -55,8 +55,8 @@ class RemoteAuthDatasource {
       await _client.raw.post(
         '/auth/logout',
         data: {
-          if (refreshToken != null) 'refreshToken': refreshToken,
-          if (pushToken != null) 'pushToken': pushToken,
+          'refreshToken': ?refreshToken,
+          'pushToken': ?pushToken,
         },
       );
     } on DioException catch (e) {
@@ -97,9 +97,9 @@ class RemoteAuthDatasource {
         '/users/me/roles',
         data: {
           'role': role,
-          if (companyId != null) 'companyId': companyId,
-          if (idDocumentType != null) 'idDocumentType': idDocumentType,
-          if (idDocumentNumber != null) 'idDocumentNumber': idDocumentNumber,
+          'companyId': ?companyId,
+          'idDocumentType': ?idDocumentType,
+          'idDocumentNumber': ?idDocumentNumber,
         },
       );
       return res.data['data'] as Map<String, dynamic>;

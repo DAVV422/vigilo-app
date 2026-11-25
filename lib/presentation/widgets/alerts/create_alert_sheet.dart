@@ -9,9 +9,9 @@ class CreateAlertSheet extends StatefulWidget {
   final void Function(String title, String description, AlertCategory category) onPublish;
 
   const CreateAlertSheet({
-    Key? key,
+    super.key,
     required this.onPublish,
-  }) : super(key: key);
+  });
 
   @override
   State<CreateAlertSheet> createState() => _CreateAlertSheetState();

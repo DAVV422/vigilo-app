@@ -12,12 +12,12 @@ class ProximityAlertOverlay extends StatefulWidget {
   final VoidCallback onReject;
 
   const ProximityAlertOverlay({
-    Key? key,
+    super.key,
     required this.incident,
     required this.onDismiss,
     required this.onConfirm,
     required this.onReject,
-  }) : super(key: key);
+  });
 
   @override
   State<ProximityAlertOverlay> createState() => _ProximityAlertOverlayState();

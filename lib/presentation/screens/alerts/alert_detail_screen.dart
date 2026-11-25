@@ -11,9 +11,9 @@ class AlertDetailScreen extends ConsumerWidget {
   final Incident incident;
 
   const AlertDetailScreen({
-    Key? key,
+    super.key,
     required this.incident,
-  }) : super(key: key);
+  });
 
   AlertCategory get _category {
     switch (incident.type) {

@@ -13,12 +13,12 @@ class AlertCard extends StatelessWidget {
   final VoidCallback? onViewTap;
 
   const AlertCard({
-    Key? key,
+    super.key,
     required this.incident,
     required this.isValidatedByMe,
     this.onValidateTap,
     this.onViewTap,
-  }) : super(key: key);
+  });
 
   AlertCategory get _category {
     switch (incident.type) {
