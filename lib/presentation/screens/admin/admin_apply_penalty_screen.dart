@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/errors/describe_error.dart';
 import '../../../core/logging/app_logger.dart';
+import '../../../domain/entities/admin_user.dart';
 import '../../../domain/entities/penalty.dart';
 import '../../../theme/app_colors.dart';
 import '../../providers/providers.dart';
@@ -92,7 +93,7 @@ class _AdminApplyPenaltyScreenState
       _searchMessage = null;
     });
     try {
-      final list = await ref.read(penaltiesRepositoryProvider).searchUsers(q);
+      final list = await ref.read(adminUsersRepositoryProvider).search(q);
       if (!mounted) return;
       setState(() {
         _results = list;

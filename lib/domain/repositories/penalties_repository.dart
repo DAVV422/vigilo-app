@@ -51,13 +51,6 @@ abstract class PenaltiesRepository {
     String? type,
   });
 
-  /// Busca personas por nombre, usuario o correo exacto.
-  ///
-  /// Exige al menos 3 caracteres: es una búsqueda, no un listado. Sin esto
-  /// no habría forma de obtener el `userId` que piden [apply] y el ajuste
-  /// de límites.
-  Future<List<AdminUser>> searchUsers(String query);
-
   /// Descuenta puntos, escala por reincidencia, puede revocar el rol de
   /// recolector y notifica. [customPointsDeducted] saltea el cálculo.
   Future<AppliedPenalty> apply({

@@ -35,12 +35,6 @@ class RemotePenaltiesRepositoryImpl implements PenaltiesRepository {
   }
 
   @override
-  Future<List<AdminUser>> searchUsers(String query) async {
-    final raw = await _datasource.searchUsers(query);
-    return raw.map((u) => AdminUser.fromJson(u as Map<String, dynamic>)).toList();
-  }
-
-  @override
   Future<AppliedPenalty> apply({
     required String userId,
     required String infractionCode,

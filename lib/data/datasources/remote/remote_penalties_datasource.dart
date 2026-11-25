@@ -47,18 +47,6 @@ class RemotePenaltiesDatasource {
     }
   }
 
-  Future<List<dynamic>> searchUsers(String query) async {
-    try {
-      final res = await _client.raw.get(
-        '/admin/users',
-        queryParameters: {'q': query},
-      );
-      return res.data['data'] as List<dynamic>;
-    } on DioException catch (e) {
-      throw _client.toApiException(e);
-    }
-  }
-
   Future<Map<String, dynamic>> apply(Map<String, dynamic> body) async {
     try {
       final res = await _client.raw.post('/admin/penalties/apply', data: body);

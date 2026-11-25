@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vigilo/domain/entities/admin_user.dart';
 import 'package:vigilo/domain/entities/penalty.dart';
 
 /// Las tres reglas tal como las siembra el servidor.

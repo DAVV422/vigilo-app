@@ -33,7 +33,15 @@ import '../../data/repositories/demo_companies_repository_impl.dart';
 import '../../data/repositories/demo_materials_repository_impl.dart';
 import '../../data/repositories/remote_companies_repository_impl.dart';
 import '../../data/repositories/remote_materials_repository_impl.dart';
+import '../../data/datasources/remote/remote_admin_users_datasource.dart';
 import '../../data/datasources/remote/remote_penalties_datasource.dart';
+import '../../data/repositories/demo_admin_users_repository_impl.dart';
+import '../../data/repositories/remote_admin_users_repository_impl.dart';
+import '../../data/datasources/remote/remote_system_config_datasource.dart';
+import '../../data/repositories/demo_system_config_repository_impl.dart';
+import '../../data/repositories/remote_system_config_repository_impl.dart';
+import '../../domain/repositories/admin_users_repository.dart';
+import '../../domain/repositories/system_config_repository.dart';
 import '../../data/repositories/demo_penalties_repository_impl.dart';
 import '../../data/repositories/remote_penalties_repository_impl.dart';
 import '../../domain/repositories/companies_repository.dart';
@@ -155,6 +163,25 @@ final materialsRepositoryProvider = Provider<MaterialsRepository>((ref) {
   }
   final client = ref.watch(apiClientProvider);
   return RemoteMaterialsRepositoryImpl(RemoteMaterialsDatasource(client));
+});
+
+/// Búsqueda de personas para administración. La comparten las sanciones y
+/// el ajuste de límites por recolector.
+final adminUsersRepositoryProvider = Provider<AdminUsersRepository>((ref) {
+  if (AppConfig.demoMode) {
+    return const DemoAdminUsersRepositoryImpl();
+  }
+  final client = ref.watch(apiClientProvider);
+  return RemoteAdminUsersRepositoryImpl(RemoteAdminUsersDatasource(client));
+});
+
+/// Parámetros globales y límites por recolector. Solo `ADMIN`.
+final systemConfigRepositoryProvider = Provider<SystemConfigRepository>((ref) {
+  if (AppConfig.demoMode) {
+    return DemoSystemConfigRepositoryImpl();
+  }
+  final client = ref.watch(apiClientProvider);
+  return RemoteSystemConfigRepositoryImpl(RemoteSystemConfigDatasource(client));
 });
 
 /// Reglas de penalización y sanciones. Solo `ADMIN`.

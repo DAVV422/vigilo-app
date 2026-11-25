@@ -95,12 +95,6 @@ class DemoPenaltiesRepositoryImpl implements PenaltiesRepository {
         .toList();
   }
 
-  /// El modo demo no tiene una base de usuarios que recorrer: el estado
-  /// local solo conoce a quien inició sesión. Devolver una lista vacía es
-  /// la respuesta honesta, y la pantalla lo explica.
-  @override
-  Future<List<AdminUser>> searchUsers(String query) async => const [];
-
   @override
   Future<AppliedPenalty> apply({
     required String userId,
