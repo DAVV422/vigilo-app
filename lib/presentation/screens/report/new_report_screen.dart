@@ -143,10 +143,14 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
 
       await ref.read(incidentsProvider.notifier).addIncident(newIncident);
       
-      if (mounted) Navigator.pop(context);
+      // La guarda cubría solo el `pop`: lo que venía después tocaba
+      // `context` igual, con la pantalla ya desmontada.
+      if (!mounted) return;
+      Navigator.pop(context);
       _showSuccessDialog();
     } catch (e) {
-      if (mounted) Navigator.pop(context);
+      if (!mounted) return;
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al enviar: $e')));
     }
   }

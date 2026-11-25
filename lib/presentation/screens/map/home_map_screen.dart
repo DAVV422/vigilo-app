@@ -996,7 +996,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                         _isSidebarOpen = false;
                       });
                       Future.delayed(const Duration(milliseconds: 250), () {
-                        if (mounted) {
+                        if (context.mounted) {
                           Navigator.push(context, MaterialPageRoute(builder: (_) => const KpiScreen()));
                         }
                       });
@@ -1006,7 +1006,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                         _isSidebarOpen = false;
                       });
                       Future.delayed(const Duration(milliseconds: 250), () {
-                        if (mounted) {
+                        if (context.mounted) {
                           Navigator.push(context, MaterialPageRoute(builder: (_) => const ImpactScreen()));
                         }
                       });
@@ -1016,7 +1016,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                         _isSidebarOpen = false;
                       });
                       Future.delayed(const Duration(milliseconds: 250), () {
-                        if (mounted) {
+                        if (context.mounted) {
                           Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreScreen()));
                         }
                       });
@@ -1026,7 +1026,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                         _isSidebarOpen = false;
                       });
                       Future.delayed(const Duration(milliseconds: 250), () {
-                        if (mounted) {
+                        if (context.mounted) {
                           Navigator.push(context, MaterialPageRoute(builder: (_) => const PointsScreen()));
                         }
                       });
@@ -1036,7 +1036,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                         _isSidebarOpen = false;
                       });
                       Future.delayed(const Duration(milliseconds: 250), () {
-                        if (mounted) {
+                        if (context.mounted) {
                           Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionsScreen()));
                         }
                       });
@@ -1046,7 +1046,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                         _isSidebarOpen = false;
                       });
                       Future.delayed(const Duration(milliseconds: 250), () {
-                        if (mounted) {
+                        if (context.mounted) {
                           Navigator.push(context, MaterialPageRoute(builder: (_) => const MyListingsScreen()));
                         }
                       });

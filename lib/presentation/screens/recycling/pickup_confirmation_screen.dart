@@ -140,6 +140,10 @@ class _PickupConfirmationScreenState extends ConsumerState<PickupConfirmationScr
       ),
     );
     if (confirmed != true) return;
+    // El diálogo es un `await`: si la pantalla se cerró mientras estaba
+    // abierto, `context` ya no sirve y el ScaffoldMessenger de abajo
+    // revienta.
+    if (!mounted) return;
     if (reasonController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Indica un motivo para la disputa.'), backgroundColor: AppColors.error),
