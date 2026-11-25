@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../theme/app_colors.dart';
 import '../../../domain/entities/store_product.dart';
 import '../../providers/providers.dart';
+import 'my_redemptions_screen.dart';
 import '../../widgets/store/product_card.dart';
 import '../../../widgets/main_app_bar.dart';
 import '../../../../core/errors/describe_error.dart';
@@ -30,6 +31,10 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   bool _isLoading = true;
   String? _loadError;
   bool _isRedeeming = false;
+
+  /// Para poder refrescar la pestaña de canjes tras canjear, sin obligar al
+  /// usuario a tirar de la lista para ver el código que acaba de generar.
+  final _redemptionsKey = GlobalKey<MyRedemptionsScreenState>();
 
   @override
   void initState() {
@@ -99,6 +104,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         ),
       );
       await _loadProducts();
+      // El canje recién hecho tiene que estar en la otra pestaña cuando el
+      // usuario cambie a ella, con su código ya visible.
+      await _redemptionsKey.currentState?.load();
     } catch (e, st) {
       if (!mounted) return;
       final message = describeError(e, st, log: _log, operation: 'completar el canje', whereToCheck: 'Mis Canjes');
@@ -120,10 +128,41 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   Widget build(BuildContext context) {
     final userPoints = ref.watch(authProvider)?.points ?? 0;
 
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: const MainAppBar(title: 'Tienda'),
-      body: RefreshIndicator(
+    // El catálogo y el resultado de canjear viven en la misma pantalla a
+    // propósito: esconder "Mis canjes" tras un ícono repetiría el problema
+    // que ya tenía CollectionsScreen, y gastar una pestaña de la barra
+    // inferior no es opción cuando con el rol de recolector ya son cinco.
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: AppColors.surface,
+        appBar: const MainAppBar(title: 'Tienda'),
+        body: Column(
+          children: [
+            const TabBar(
+              labelColor: AppColors.primary,
+              unselectedLabelColor: AppColors.onSurfaceVariant,
+              indicatorColor: AppColors.primary,
+              tabs: [Tab(text: 'Catálogo'), Tab(text: 'Mis canjes')],
+            ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _buildCatalog(userPoints),
+                  MyRedemptionsScreen(key: _redemptionsKey),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// El catálogo tal cual estaba: no se reescribió nada de la carga, los
+  /// filtros, la búsqueda ni el canje, solo se movió dentro de la pestaña.
+  Widget _buildCatalog(int userPoints) {
+    return RefreshIndicator(
         onRefresh: _loadProducts,
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
@@ -149,7 +188,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
-      ),
     );
   }
 
