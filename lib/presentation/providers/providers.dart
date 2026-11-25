@@ -14,6 +14,7 @@ import '../../data/datasources/remote/remote_analytics_datasource.dart';
 import '../../data/datasources/remote/remote_incident_datasource.dart';
 import '../../data/datasources/remote/remote_media_datasource.dart';
 import '../../data/datasources/remote/remote_notifications_datasource.dart';
+import '../../data/datasources/remote/remote_ratings_datasource.dart';
 import '../../data/datasources/remote/remote_recycling_datasource.dart';
 import '../../data/datasources/remote/remote_store_datasource.dart';
 import '../../data/demo/demo_state.dart';
@@ -24,6 +25,7 @@ import '../../data/repositories/demo_auth_repository_impl.dart';
 import '../../data/repositories/demo_media_repository_impl.dart';
 import '../../data/repositories/demo_notifications_repository_impl.dart';
 import '../../data/repositories/demo_points_repository_impl.dart';
+import '../../data/repositories/demo_ratings_repository_impl.dart';
 import '../../data/repositories/demo_recycling_repository_impl.dart';
 import '../../data/repositories/demo_store_repository_impl.dart';
 import '../../data/repositories/incident_repository_impl.dart';
@@ -33,6 +35,7 @@ import '../../data/repositories/remote_incident_repository_impl.dart';
 import '../../data/repositories/remote_media_repository_impl.dart';
 import '../../data/repositories/remote_notifications_repository_impl.dart';
 import '../../data/repositories/remote_points_repository_impl.dart';
+import '../../data/repositories/remote_ratings_repository_impl.dart';
 import '../../data/repositories/remote_recycling_repository_impl.dart';
 import '../../data/repositories/remote_store_repository_impl.dart';
 import '../../data/repositories/user_repository_impl.dart';
@@ -46,6 +49,7 @@ import '../../domain/repositories/incident_repository.dart';
 import '../../domain/repositories/media_repository.dart';
 import '../../domain/repositories/notifications_repository.dart';
 import '../../domain/repositories/points_repository.dart';
+import '../../domain/repositories/ratings_repository.dart';
 import '../../domain/repositories/recycling_repository.dart';
 import '../../domain/repositories/store_repository.dart';
 
@@ -115,6 +119,14 @@ final recyclingRepositoryProvider = Provider<RecyclingRepository>((ref) {
   }
   final client = ref.watch(apiClientProvider);
   return RemoteRecyclingRepositoryImpl(RemoteRecyclingDatasource(client));
+});
+
+final ratingsRepositoryProvider = Provider<RatingsRepository>((ref) {
+  if (AppConfig.demoMode) {
+    return DemoRatingsRepositoryImpl(ref.watch(demoStateProvider));
+  }
+  final client = ref.watch(apiClientProvider);
+  return RemoteRatingsRepositoryImpl(RemoteRatingsDatasource(client));
 });
 
 final mediaRepositoryProvider = Provider<MediaRepository>((ref) {

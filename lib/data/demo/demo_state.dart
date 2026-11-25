@@ -1,6 +1,7 @@
 import '../../domain/entities/app_notification.dart';
 import '../../domain/entities/material_type.dart';
 import '../../domain/entities/points_transaction.dart';
+import '../../domain/entities/rating.dart';
 import '../../domain/entities/recycling_listing.dart';
 import '../../domain/entities/recycling_pickup.dart';
 import '../../domain/entities/redemption.dart';
@@ -172,6 +173,8 @@ class DemoState {
       ),
       pickupId: 'demo-pickup-1',
       pickupRecyclerId: 'u7',
+      pickupRecyclerName: 'Diego Rojas',
+      pickupRecyclerTrustScore: 4.5,
       pickupStatus: 'COMPLETED',
       pickupCompensationStatus: 'CONFIRMED',
       materials: [
@@ -201,6 +204,8 @@ class DemoState {
       ),
       pickupId: 'demo-pickup-2',
       pickupRecyclerId: 'u6',
+      pickupRecyclerName: 'Patricia Vargas',
+      pickupRecyclerTrustScore: 4.8,
       pickupStatus: 'COMPLETED',
       pickupCompensationStatus: 'CONFIRMED',
       materials: [
@@ -348,6 +353,37 @@ class DemoState {
     ),
   ];
 
+  /// Calificaciones del modo demo.
+  ///
+  /// Guarda las dos puntas —quién calificó y a quién— porque el repositorio
+  /// demo tiene que responder las dos preguntas que responde el backend:
+  /// qué recibió alguien (`getUserRatings`) y qué emitió el usuario en
+  /// sesión (`getMyRatings`).
+  final List<DemoRating> ratings = [
+    DemoRating(
+      id: 'demo-rating-1',
+      contextId: 'demo-pickup-1',
+      raterId: 'u6',
+      rateeId: 'u1',
+      score: 5,
+      tags: ['material_bien_separado', 'buena_comunicacion'],
+      comment: 'Todo enjuagado y separado, se cargó en diez minutos.',
+      raterFirstName: 'Patricia',
+      raterLastName: 'Vargas',
+    ),
+    DemoRating(
+      id: 'demo-rating-2',
+      contextId: 'demo-pickup-2',
+      raterId: 'u7',
+      rateeId: 'u2',
+      score: 4,
+      tags: ['peso_justo'],
+      comment: 'El material estaba bien, aunque pesaba menos de lo anunciado.',
+      raterFirstName: 'Diego',
+      raterLastName: 'Rojas',
+    ),
+  ];
+
   String newId(String prefix) => '$prefix-${DateTime.now().microsecondsSinceEpoch}';
 
   /// Acredita puntos al usuario con sesión activa y deja constancia en el
@@ -370,4 +406,57 @@ class DemoState {
       ),
     );
   }
+}
+
+/// Una calificación en el modo demo. No reusa [Rating] porque esa entidad
+/// modela lo *recibido* y no dice a quién ni en qué recojo; acá hacen falta
+/// las dos puntas para poder responder también qué emitió el usuario.
+class DemoRating {
+  DemoRating({
+    required this.id,
+    required this.contextId,
+    required this.raterId,
+    required this.rateeId,
+    required this.score,
+    this.tags = const [],
+    this.comment,
+    this.raterFirstName = '',
+    this.raterLastName = '',
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
+
+  final String id;
+  final String contextId;
+  final String raterId;
+  final String rateeId;
+  final int score;
+  final List<String> tags;
+  final String? comment;
+  final String raterFirstName;
+  final String raterLastName;
+  final DateTime createdAt;
+
+  Rating toRating() => Rating(
+        id: id,
+        score: score,
+        tags: tags,
+        comment: comment,
+        createdAt: createdAt,
+        rater: RatingAuthor(
+          id: raterId,
+          firstName: raterFirstName,
+          lastName: raterLastName,
+        ),
+      );
+
+  EmittedRating toEmitted() => EmittedRating(
+        id: id,
+        contextType: 'RECYCLING_PICKUP',
+        contextId: contextId,
+        rateeId: rateeId,
+        score: score,
+        tags: tags,
+        comment: comment,
+        createdAt: createdAt,
+      );
 }
