@@ -48,6 +48,11 @@ class RemoteAuthRepositoryImpl implements AuthRepository {
       email: data['email'] as String,
       points: toIntOrNull(data['pointsBalance']) ?? 0,
       trustScore: toDoubleOrNull(data['trustScore']) ?? 5.0,
+      // El perfil mostraba "todavía no tienes calificaciones" a gente que sí
+      // tenía, hasta que cerraba y reabría la app: recién ahí la sesión se
+      // restauraba contra /users/me, que sí traía el dato. Faltaba en las
+      // dos puntas — el backend tampoco lo mandaba.
+      ratingsCount: toIntOrNull(data['ratingsCount']) ?? 0,
       roles: _mapRoles((data['roles'] as List<dynamic>?) ?? const []),
     );
   }
