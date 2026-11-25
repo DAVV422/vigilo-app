@@ -7,6 +7,7 @@ import 'admin_companies_screen.dart';
 import 'admin_disputes_screen.dart';
 import 'admin_materials_screen.dart';
 import 'admin_penalties_screen.dart';
+import 'admin_audit_screen.dart';
 import 'admin_system_config_screen.dart';
 import 'admin_fulfill_redemption_screen.dart';
 import 'admin_products_screen.dart';
@@ -44,6 +45,7 @@ Widget _buildMaterials(BuildContext _) => const AdminMaterialsScreen();
 Widget _buildCompanies(BuildContext _) => const AdminCompaniesScreen();
 Widget _buildPenalties(BuildContext _) => const AdminPenaltiesScreen();
 Widget _buildSystemConfig(BuildContext _) => const AdminSystemConfigScreen();
+Widget _buildAudit(BuildContext _) => const AdminAuditScreen();
 
 class AdminHomeScreen extends ConsumerWidget {
   const AdminHomeScreen({super.key});
@@ -108,6 +110,7 @@ class AdminHomeScreen extends ConsumerWidget {
           subtitle: 'Quién hizo qué y cuándo',
           icon: Icons.history_outlined,
           allowedRoles: _admin,
+          builder: _buildAudit,
         ),
       ];
 

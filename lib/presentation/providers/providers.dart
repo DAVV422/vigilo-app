@@ -40,7 +40,11 @@ import '../../data/repositories/remote_admin_users_repository_impl.dart';
 import '../../data/datasources/remote/remote_system_config_datasource.dart';
 import '../../data/repositories/demo_system_config_repository_impl.dart';
 import '../../data/repositories/remote_system_config_repository_impl.dart';
+import '../../data/datasources/remote/remote_audit_datasource.dart';
+import '../../data/repositories/demo_audit_repository_impl.dart';
+import '../../data/repositories/remote_audit_repository_impl.dart';
 import '../../domain/repositories/admin_users_repository.dart';
+import '../../domain/repositories/audit_repository.dart';
 import '../../domain/repositories/system_config_repository.dart';
 import '../../data/repositories/demo_penalties_repository_impl.dart';
 import '../../data/repositories/remote_penalties_repository_impl.dart';
@@ -182,6 +186,16 @@ final systemConfigRepositoryProvider = Provider<SystemConfigRepository>((ref) {
   }
   final client = ref.watch(apiClientProvider);
   return RemoteSystemConfigRepositoryImpl(RemoteSystemConfigDatasource(client));
+});
+
+/// Bitácora de auditoría. Solo `ADMIN`: registra la actividad de todos,
+/// con IP y user-agent.
+final auditRepositoryProvider = Provider<AuditRepository>((ref) {
+  if (AppConfig.demoMode) {
+    return const DemoAuditRepositoryImpl();
+  }
+  final client = ref.watch(apiClientProvider);
+  return RemoteAuditRepositoryImpl(RemoteAuditDatasource(client));
 });
 
 /// Reglas de penalización y sanciones. Solo `ADMIN`.
