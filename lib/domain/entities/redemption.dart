@@ -33,7 +33,10 @@ class Redemption {
     final user = json['user'] as Map<String, dynamic>?;
     return Redemption(
       id: json['id'] as String,
-      productId: json['productId'] as String,
+      // `my-redemptions` manda `productId` en la raíz; la búsqueda por
+      // código solo trae el producto anidado. El id está en los dos casos,
+      // en distinto lugar.
+      productId: (json['productId'] ?? product?['id']) as String,
       productName: product?['name'] as String?,
       productImageUrl: product?['imageUrl'] as String?,
       pointsSpent: toInt(json['pointsSpent'], field: 'pointsSpent'),
