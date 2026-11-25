@@ -334,7 +334,7 @@ class IncidentDetailModal extends ConsumerWidget {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) => const Text('Error cargando usuarios'),
+              error: (_, _) => const Text('Error cargando usuarios'),
             ),
             const SizedBox(height: 16),
           ],

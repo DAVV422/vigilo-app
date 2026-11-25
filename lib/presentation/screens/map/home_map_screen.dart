@@ -49,7 +49,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
 
   bool _isFilterViewActive = false;
   String _selectedMainFilter = 'Todos';
-  final String _selectedSubFilter = '';
 
   Widget _buildFilterChip(String label, bool isSelected, VoidCallback onTap) {
     return GestureDetector(
@@ -227,23 +226,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
     });
 
     _radarSweepController!.forward();
-
-    // Contar reportes cercanos detectados en rango
-    final incidents = ref.read(incidentsProvider);
-    int nearbyCount = 0;
-    for (var incident in incidents) {
-      if (incident.status == IncidentStatus.active) {
-        final dist = Geolocator.distanceBetween(
-          _currentLocation.latitude,
-          _currentLocation.longitude,
-          incident.location.latitude,
-          incident.location.longitude,
-        );
-        if (dist <= 200) {
-          nearbyCount++;
-        }
-      }
-    }
   }
 
   void _showIncidentDetail(Incident incident) {
@@ -482,9 +464,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
         ),
       );
     }
-
-    final userName = user?.name ?? 'Carlos Mendoza';
-    final userInitials = userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : 'C';
 
     return Scaffold(
       backgroundColor: AppColors.background,
