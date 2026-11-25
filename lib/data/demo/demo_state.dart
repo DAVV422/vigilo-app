@@ -29,6 +29,7 @@ class DemoState {
       pointsPerKg: 10.0,
       minPayoutThreshold: 5.0,
       co2FactorPerKg: 1.5,
+      currentPricePerKg: 1.20,
     ),
     MaterialType(
       id: 'demo-mat-paper',
@@ -38,6 +39,7 @@ class DemoState {
       pointsPerKg: 8.0,
       minPayoutThreshold: 5.0,
       co2FactorPerKg: 0.9,
+      currentPricePerKg: 0.50,
     ),
     MaterialType(
       id: 'demo-mat-glass',
@@ -47,6 +49,7 @@ class DemoState {
       pointsPerKg: 5.0,
       minPayoutThreshold: 3.0,
       co2FactorPerKg: 0.3,
+      currentPricePerKg: 0.20,
     ),
     MaterialType(
       id: 'demo-mat-metal',
@@ -56,6 +59,7 @@ class DemoState {
       pointsPerKg: 25.0,
       minPayoutThreshold: 10.0,
       co2FactorPerKg: 8.0,
+      currentPricePerKg: 4.50,
     ),
     MaterialType(
       id: 'demo-mat-tetrapak',
@@ -65,6 +69,7 @@ class DemoState {
       pointsPerKg: 12.0,
       minPayoutThreshold: 5.0,
       co2FactorPerKg: 1.2,
+      currentPricePerKg: 0.80,
     ),
   ];
 
