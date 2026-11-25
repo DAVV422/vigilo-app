@@ -37,6 +37,22 @@ abstract class AuthRepository {
   /// sesión que ya cerró.
   Future<void> logout({String? pushToken});
 
+  /// Actualiza el perfil propio y devuelve el usuario ya actualizado.
+  ///
+  /// Solo se manda lo que cambió: los cuatro campos son opcionales y el
+  /// pipe del servidor descarta en silencio lo que no declara, así que
+  /// enviar de más daría la falsa impresión de que se guardó.
+  ///
+  /// [phone] tiene que llegar **sin espacios ni guiones**: el servidor lo
+  /// valida contra `/^\+?[0-9]{7,15}$/` y `+591 70011223`, que es como se
+  /// escribe un número acá, no pasa.
+  Future<User> updateProfile({
+    String? firstName,
+    String? lastName,
+    String? phone,
+    String? avatarUrl,
+  });
+
   Future<RoleRequestResult> requestRole({
     required String role,
     String? companyId,

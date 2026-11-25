@@ -4,6 +4,7 @@ import '../../../domain/entities/user.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_icons.dart';
 import '../../providers/providers.dart';
+import 'edit_profile_screen.dart';
 import 'user_ratings_screen.dart';
 import '../../../widgets/main_app_bar.dart';
 import '../../../../core/errors/describe_error.dart';
@@ -179,6 +180,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           Text(
             '@${user.username}',
             style: TextStyle(color: AppColors.primaryFixed, fontSize: 13),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+            ),
+            icon: const Icon(Icons.edit_outlined, size: 16, color: Colors.white),
+            label: const Text('Editar perfil',
+                style: TextStyle(color: Colors.white, fontSize: 13)),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Colors.white54),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              visualDensity: VisualDensity.compact,
+            ),
           ),
         ],
       ),

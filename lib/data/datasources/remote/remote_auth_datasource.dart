@@ -77,6 +77,15 @@ class RemoteAuthDatasource {
     }
   }
 
+  Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> body) async {
+    try {
+      final res = await _client.raw.patch('/users/me', data: body);
+      return res.data['data'] as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw _client.toApiException(e);
+    }
+  }
+
   Future<Map<String, dynamic>> requestRole({
     required String role,
     String? companyId,

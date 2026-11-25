@@ -145,6 +145,24 @@ class RemoteAuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<User> updateProfile({
+    String? firstName,
+    String? lastName,
+    String? phone,
+    String? avatarUrl,
+  }) async {
+    // `PATCH /users/me` devuelve el perfil completo, con la misma forma que
+    // `GET`, así que no hace falta una segunda vuelta para releerlo.
+    final data = await _datasource.updateProfile({
+      'firstName': ?firstName,
+      'lastName': ?lastName,
+      'phone': ?phone,
+      'avatarUrl': ?avatarUrl,
+    });
+    return _userFromProfile(data);
+  }
+
+  @override
   Future<RoleRequestResult> requestRole({
     required String role,
     String? companyId,

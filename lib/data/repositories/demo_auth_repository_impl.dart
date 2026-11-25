@@ -90,6 +90,29 @@ class DemoAuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<User> updateProfile({
+    String? firstName,
+    String? lastName,
+    String? phone,
+    String? avatarUrl,
+  }) async {
+    final actual = _state.currentUser;
+    if (actual == null) {
+      throw ApiException(statusCode: 401, message: 'No hay sesión activa.');
+    }
+    // Se muta el usuario del estado demo, que es lo que devuelve
+    // `restoreSession`: si no, el perfil seguiría mostrando lo viejo.
+    final actualizado = actual.copyWith(
+      name: firstName,
+      lastName: lastName,
+      phone: phone,
+      avatarUrl: avatarUrl,
+    );
+    _state.currentUser = actualizado;
+    return actualizado;
+  }
+
+  @override
   Future<RoleRequestResult> requestRole({
     required String role,
     String? companyId,

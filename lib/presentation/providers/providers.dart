@@ -396,6 +396,25 @@ class AuthNotifier extends Notifier<User?> {
     await _registerPushToken();
   }
 
+  /// Guarda el perfil y deja la sesión al día en el mismo paso.
+  ///
+  /// No llama a [reloadUser]: el `PATCH` ya devuelve el usuario actualizado
+  /// y volver a pedirlo sería una segunda vuelta para el mismo dato.
+  Future<void> updateProfile({
+    String? firstName,
+    String? lastName,
+    String? phone,
+    String? avatarUrl,
+  }) async {
+    final repo = ref.read(authRepositoryProvider);
+    state = await repo.updateProfile(
+      firstName: firstName,
+      lastName: lastName,
+      phone: phone,
+      avatarUrl: avatarUrl,
+    );
+  }
+
   Future<void> reloadUser() async {
     if (state == null) return;
     final repo = ref.read(authRepositoryProvider);
