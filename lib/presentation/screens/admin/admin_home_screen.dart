@@ -6,6 +6,7 @@ import '../../providers/providers.dart';
 import 'admin_companies_screen.dart';
 import 'admin_disputes_screen.dart';
 import 'admin_materials_screen.dart';
+import 'admin_penalties_screen.dart';
 import 'admin_fulfill_redemption_screen.dart';
 import 'admin_products_screen.dart';
 import 'widgets/admin_scaffold.dart';
@@ -40,6 +41,7 @@ Widget _buildFulfill(BuildContext _) => const AdminFulfillRedemptionScreen();
 Widget _buildDisputes(BuildContext _) => const AdminDisputesScreen();
 Widget _buildMaterials(BuildContext _) => const AdminMaterialsScreen();
 Widget _buildCompanies(BuildContext _) => const AdminCompaniesScreen();
+Widget _buildPenalties(BuildContext _) => const AdminPenaltiesScreen();
 
 class AdminHomeScreen extends ConsumerWidget {
   const AdminHomeScreen({super.key});
@@ -84,9 +86,16 @@ class AdminHomeScreen extends ConsumerWidget {
           builder: _buildCompanies,
         ),
         _Section(
-          title: 'Penalizaciones y configuración',
-          subtitle: 'Reglas, sanciones y parámetros del sistema',
-          icon: Icons.rule_outlined,
+          title: 'Sanciones',
+          subtitle: 'Reglas de penalización y sanciones aplicadas',
+          icon: Icons.gavel_outlined,
+          allowedRoles: _admin,
+          builder: _buildPenalties,
+        ),
+        _Section(
+          title: 'Configuración del sistema',
+          subtitle: 'Límites de recojo y plazos automáticos',
+          icon: Icons.tune_outlined,
           allowedRoles: _admin,
         ),
         _Section(
