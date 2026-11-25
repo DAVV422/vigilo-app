@@ -2,6 +2,7 @@ import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../core/storage/secure_session_storage.dart';
 import '../datasources/remote/remote_auth_datasource.dart';
+import '../../core/network/api_exception.dart';
 import '../../core/network/json_parsing.dart';
 
 class RemoteAuthRepositoryImpl implements AuthRepository {
@@ -114,10 +115,21 @@ class RemoteAuthRepositoryImpl implements AuthRepository {
     try {
       final profile = await _datasource.getMe();
       return _userFromProfile(profile);
+    } on ApiException catch (e) {
+      // Los tokens se borran **solo** si el servidor dijo que no valen.
+      //
+      // Antes se borraban ante cualquier error, y un fallo de red no es
+      // una sesión inválida: abrir la app una vez sin señal dejaba a la
+      // persona afuera para siempre, porque tampoco podía volver a iniciar
+      // sesión sin conexión. Guardar los tokens existe justamente para
+      // evitar eso.
+      if (e.isUnauthorized || e.isForbidden) {
+        await _sessionStorage.clear();
+      }
+      return null;
     } catch (_) {
-      // El access token pudo haber vencido; el interceptor de ApiClient ya
-      // intentó renovarlo. Si igual falla, no hay sesión válida.
-      await _sessionStorage.clear();
+      // Algo inesperado al parsear la respuesta: no es motivo para tirar
+      // la sesión.
       return null;
     }
   }
