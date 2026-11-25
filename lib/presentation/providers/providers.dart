@@ -27,6 +27,14 @@ import '../../data/repositories/demo_media_repository_impl.dart';
 import '../../data/repositories/demo_notifications_repository_impl.dart';
 import '../../data/repositories/demo_points_repository_impl.dart';
 import '../../data/repositories/demo_disputes_repository_impl.dart';
+import '../../data/datasources/remote/remote_companies_datasource.dart';
+import '../../data/datasources/remote/remote_materials_datasource.dart';
+import '../../data/repositories/demo_companies_repository_impl.dart';
+import '../../data/repositories/demo_materials_repository_impl.dart';
+import '../../data/repositories/remote_companies_repository_impl.dart';
+import '../../data/repositories/remote_materials_repository_impl.dart';
+import '../../domain/repositories/companies_repository.dart';
+import '../../domain/repositories/materials_repository.dart';
 import '../../data/repositories/demo_ratings_repository_impl.dart';
 import '../../data/repositories/demo_recycling_repository_impl.dart';
 import '../../data/repositories/demo_store_repository_impl.dart';
@@ -132,6 +140,25 @@ final disputesRepositoryProvider = Provider<DisputesRepository>((ref) {
   }
   final client = ref.watch(apiClientProvider);
   return RemoteDisputesRepositoryImpl(RemoteDisputesDatasource(client));
+});
+
+/// Gobierno de los materiales: precio por kilo y puntos. Separado de
+/// `recyclingRepositoryProvider`, que lee los mismos materiales para el
+/// formulario de publicación pero no los configura.
+final materialsRepositoryProvider = Provider<MaterialsRepository>((ref) {
+  if (AppConfig.demoMode) {
+    return DemoMaterialsRepositoryImpl(ref.watch(demoStateProvider));
+  }
+  final client = ref.watch(apiClientProvider);
+  return RemoteMaterialsRepositoryImpl(RemoteMaterialsDatasource(client));
+});
+
+final companiesRepositoryProvider = Provider<CompaniesRepository>((ref) {
+  if (AppConfig.demoMode) {
+    return DemoCompaniesRepositoryImpl();
+  }
+  final client = ref.watch(apiClientProvider);
+  return RemoteCompaniesRepositoryImpl(RemoteCompaniesDatasource(client));
 });
 
 final ratingsRepositoryProvider = Provider<RatingsRepository>((ref) {

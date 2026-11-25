@@ -4,7 +4,7 @@ import '../../../../theme/app_colors.dart';
 /// Marco común de las pantallas de gestión.
 ///
 /// Además del título y el refresco, pinta una franja que avisa que se está
-/// operando como administrador. En un teléfono no hay URL ni barra lateral
+/// operando con permisos elevados. En un teléfono no hay URL ni barra lateral
 /// que lo recuerde, y confundir "ver el catálogo" con "editar el catálogo"
 /// es fácil y caro: desde acá se cambian precios, se entregan canjes y se
 /// resuelven disputas que mueven el saldo de otra persona.
@@ -61,7 +61,7 @@ class AdminBanner extends StatelessWidget {
               size: 15, color: AppColors.onTertiaryContainer),
           const SizedBox(width: 8),
           Text(
-            'Estás operando como administrador',
+            'Estás en el modo de gestión',
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,

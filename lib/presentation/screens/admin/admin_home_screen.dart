@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/entities/user.dart';
 import '../../../theme/app_colors.dart';
 import '../../providers/providers.dart';
+import 'admin_companies_screen.dart';
 import 'admin_disputes_screen.dart';
+import 'admin_materials_screen.dart';
 import 'admin_fulfill_redemption_screen.dart';
 import 'admin_products_screen.dart';
 import 'widgets/admin_scaffold.dart';
@@ -36,6 +38,8 @@ class _Section {
 Widget _buildProducts(BuildContext _) => const AdminProductsScreen();
 Widget _buildFulfill(BuildContext _) => const AdminFulfillRedemptionScreen();
 Widget _buildDisputes(BuildContext _) => const AdminDisputesScreen();
+Widget _buildMaterials(BuildContext _) => const AdminMaterialsScreen();
+Widget _buildCompanies(BuildContext _) => const AdminCompaniesScreen();
 
 class AdminHomeScreen extends ConsumerWidget {
   const AdminHomeScreen({super.key});
@@ -70,12 +74,14 @@ class AdminHomeScreen extends ConsumerWidget {
           subtitle: 'Precio por kilo y puntos de cada material',
           icon: Icons.scale_outlined,
           allowedRoles: _admin,
+          builder: _buildMaterials,
         ),
         _Section(
           title: 'Empresas',
           subtitle: 'Alta, verificación y zonas de cobertura',
           icon: Icons.business_outlined,
           allowedRoles: _admin,
+          builder: _buildCompanies,
         ),
         _Section(
           title: 'Penalizaciones y configuración',
@@ -109,12 +115,17 @@ class AdminHomeScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               children: [
                 for (final section in visible) _buildTile(context, section),
-                const SizedBox(height: 16),
-                const Text(
-                  'Las secciones apagadas todavía no están construidas.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
-                ),
+                // Solo si hay alguna apagada a la vista: a un moderador se
+                // le mostraban todas construidas y una leyenda explicando
+                // unas secciones grises que no estaban en pantalla.
+                if (visible.any((s) => !s.isReady)) ...[
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Las secciones apagadas todavía no están construidas.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                  ),
+                ],
               ],
             ),
           ),
