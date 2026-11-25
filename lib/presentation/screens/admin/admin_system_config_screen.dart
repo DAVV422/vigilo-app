@@ -176,6 +176,20 @@ class _AdminSystemConfigScreenState
 
   Future<void> _saveLimit({required bool restablecer}) async {
     final u = _selected!;
+
+    // El servidor responde 404 con el UUID y el nombre interno del rol.
+    // Como la búsqueda ya nos dijo que no es recolector, se corta acá: el
+    // mensaje del servidor sería correcto y a la vez ilegible en una
+    // pantalla que ya dice «no es recolector» en rojo.
+    if (!u.isRecycler) {
+      _snack(
+        '${u.fullName} no tiene el rol de recolector, así que no puede '
+        'tener un límite de recojos.',
+        isError: true,
+      );
+      return;
+    }
+
     int? valor;
 
     if (!restablecer) {
