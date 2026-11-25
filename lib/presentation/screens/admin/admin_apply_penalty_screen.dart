@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/errors/describe_error.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../domain/entities/penalty.dart';
@@ -96,7 +97,15 @@ class _AdminApplyPenaltyScreenState
       setState(() {
         _results = list;
         _searching = false;
-        _searchMessage = list.isEmpty ? 'Nadie coincide con «$q».' : null;
+        // En modo demo no hay padrón que recorrer, así que nunca va a
+        // coincidir nadie. Decir «nadie coincide» sugeriría que el nombre
+        // está mal escrito.
+        _searchMessage = list.isNotEmpty
+            ? null
+            : AppConfig.demoMode
+                ? 'El modo demo no tiene un padrón de usuarios para buscar. '
+                    'Esta pantalla funciona contra el servidor.'
+                : 'Nadie coincide con «$q».';
       });
     } catch (e, st) {
       if (!mounted) return;

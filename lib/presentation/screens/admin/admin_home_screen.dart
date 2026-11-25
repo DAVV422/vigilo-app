@@ -88,7 +88,9 @@ class AdminHomeScreen extends ConsumerWidget {
         _Section(
           title: 'Sanciones',
           subtitle: 'Reglas de penalización y sanciones aplicadas',
-          icon: Icons.gavel_outlined,
+          // Propio, no el martillo: ese ya es el de Disputas y dos filas
+          // distintas con el mismo ícono se leen como la misma cosa.
+          icon: Icons.block_outlined,
           allowedRoles: _admin,
           builder: _buildPenalties,
         ),
