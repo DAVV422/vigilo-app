@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/entities/user.dart';
 import '../../../theme/app_colors.dart';
 import '../../providers/providers.dart';
+import 'admin_products_screen.dart';
 import 'widgets/admin_scaffold.dart';
 
 /// Una entrada del índice de gestión.
@@ -16,9 +17,6 @@ class _Section {
     required this.subtitle,
     required this.icon,
     required this.allowedRoles,
-    // Todavía ninguna sección lo pasa, porque ninguna pantalla existe aún;
-    // el aviso desaparece solo en cuanto llegue la primera.
-    // ignore: unused_element_parameter
     this.builder,
   });
 
@@ -33,6 +31,8 @@ class _Section {
   bool allows(List<UserRole> roles) => roles.any(allowedRoles.contains);
 }
 
+Widget _buildProducts(BuildContext _) => const AdminProductsScreen();
+
 class AdminHomeScreen extends ConsumerWidget {
   const AdminHomeScreen({super.key});
 
@@ -45,6 +45,7 @@ class AdminHomeScreen extends ConsumerWidget {
           subtitle: 'Dar de alta y editar las recompensas',
           icon: Icons.storefront_outlined,
           allowedRoles: _admin,
+          builder: _buildProducts,
         ),
         _Section(
           title: 'Entrega de canjes',

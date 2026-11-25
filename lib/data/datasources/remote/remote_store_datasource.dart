@@ -24,6 +24,41 @@ class RemoteStoreDatasource {
     }
   }
 
+  /// `activeOnly=false` es lo que distingue la vista de administración de
+  /// la del ciudadano: sin eso, los productos desactivados no vuelven.
+  Future<List<dynamic>> getAllProducts() async {
+    try {
+      final res = await _client.raw.get(
+        '/store/products',
+        queryParameters: {'activeOnly': false},
+      );
+      return res.data['data'] as List<dynamic>;
+    } on DioException catch (e) {
+      throw _client.toApiException(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> createProduct(Map<String, dynamic> body) async {
+    try {
+      final res = await _client.raw.post('/store/products', data: body);
+      return res.data['data'] as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw _client.toApiException(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> updateProduct(
+    String id,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final res = await _client.raw.patch('/store/products/$id', data: body);
+      return res.data['data'] as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw _client.toApiException(e);
+    }
+  }
+
   Future<List<dynamic>> getMyRedemptions() async {
     try {
       final res = await _client.raw.get('/store/my-redemptions');

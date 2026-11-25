@@ -91,4 +91,72 @@ class DemoStoreRepositoryImpl implements StoreRepository {
 
   @override
   Future<List<Redemption>> getMyRedemptions() async => _state.redemptions;
+
+  // --- Administración ---
+  //
+  // Escriben en el mismo archivo local que el catálogo del ciudadano, igual
+  // que hace `redeem` con el stock, para que un producto dado de alta en
+  // modo demo siga ahí en la próxima sesión.
+
+  Future<List<StoreProductModel>> _readProducts() async {
+    final data = await _datasource.readData();
+    final raw = data['products'] as List<dynamic>? ?? [];
+    return raw.map((p) => StoreProductModel.fromJson(p as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> _writeProducts(List<StoreProductModel> products) async {
+    final data = await _datasource.readData();
+    final users = (data['users'] as List<dynamic>).map((u) => UserModel.fromJson(u)).toList();
+    final incidents =
+        (data['incidents'] as List<dynamic>).map((i) => IncidentModel.fromJson(i)).toList();
+    final companies = (data['companies'] as List<dynamic>)
+        .map((c) => CompanyModel.fromJson(c as Map<String, dynamic>))
+        .toList();
+    await _datasource.writeData(users, incidents, companies, products: products);
+  }
+
+  @override
+  Future<List<StoreProduct>> getAllProducts() async => _readProducts();
+
+  @override
+  Future<StoreProduct> createProduct(ProductInput input) async {
+    final products = await _readProducts();
+    final created = StoreProduct(
+      id: _state.newId('demo-product'),
+      name: input.name ?? '',
+      description: input.description ?? '',
+      imageUrl: input.imageUrl ?? '',
+      pointsCost: input.pointsCost ?? 0,
+      stock: input.stock ?? 0,
+      // El backend normaliza la categoría a mayúsculas; replicarlo evita que
+      // el modo demo acumule variantes que el real no tendría.
+      category: (input.category ?? 'GENERAL').toUpperCase(),
+      active: input.active ?? true,
+    );
+    products.add(StoreProductModel.fromEntity(created));
+    await _writeProducts(products);
+    _log.info('Producto demo creado: ${created.name}');
+    return created;
+  }
+
+  @override
+  Future<StoreProduct> updateProduct(String id, ProductInput input) async {
+    final products = await _readProducts();
+    final index = products.indexWhere((p) => p.id == id);
+    if (index == -1) {
+      throw ApiException(statusCode: 404, message: 'Producto no encontrado.');
+    }
+    final updated = products[index].copyWith(
+      name: input.name,
+      description: input.description,
+      imageUrl: input.imageUrl,
+      pointsCost: input.pointsCost,
+      stock: input.stock,
+      category: input.category?.toUpperCase(),
+      active: input.active,
+    );
+    products[index] = StoreProductModel.fromEntity(updated);
+    await _writeProducts(products);
+    return updated;
+  }
 }

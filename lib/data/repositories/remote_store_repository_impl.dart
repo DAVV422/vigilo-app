@@ -39,4 +39,20 @@ class RemoteStoreRepositoryImpl implements StoreRepository {
     final raw = await _datasource.getMyRedemptions();
     return raw.map((json) => Redemption.fromJson(json as Map<String, dynamic>)).toList();
   }
+
+  @override
+  Future<List<StoreProduct>> getAllProducts() async {
+    final raw = await _datasource.getAllProducts();
+    return raw.map((j) => StoreProduct.fromJson(j as Map<String, dynamic>)).toList();
+  }
+
+  @override
+  Future<StoreProduct> createProduct(ProductInput input) async {
+    return StoreProduct.fromJson(await _datasource.createProduct(input.toJson()));
+  }
+
+  @override
+  Future<StoreProduct> updateProduct(String id, ProductInput input) async {
+    return StoreProduct.fromJson(await _datasource.updateProduct(id, input.toJson()));
+  }
 }
